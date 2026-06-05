@@ -12,11 +12,12 @@
 | 3 | **Digitador** | Registra conductores, vehículos, asigna espacios/tarjetas | Tauri Desktop | Alta |
 | 4 | **Jefe Seguridad** | Supervisa ocupación en vivo, auditoría de infracciones | Tauri Desktop | Media |
 | 5 | **Jefe Servicios Grales** | Administra sede, gestión de espacios, reportes | Tauri Desktop | Media |
-| 6 | **Directivo** | Visión global, estadísticas, indicadores de gestión | Tauri Desktop | Baja |
+| 6 | **Jefe Servicios Digitales** | Supervisa plataforma digital, integraciones, datos técnicos | Tauri Desktop | Baja |
+| 7 | **Directivo** | Visión global, estadísticas, indicadores de gestión | Tauri Desktop | Baja |
 
 ## Matriz de Permisos (RBAC)
 
-| Recurso | Conductor | Guardia | Digitador | Jefe Seg. | Jefe SG | Directivo |
+| Recurso | Conductor | Guardia | Digitador | Jefe Seg. | Jefe SG | Jefe SD | Directivo |
 |---------|-----------|---------|-----------|-----------|---------|-----------|
 | Propio perfil | CRUD | - | CRUD | - | - | - |
 | Propios vehículos | CRUD | - | CRUD | - | - | - |
@@ -25,6 +26,7 @@
 | Asignaciones | LEER (propias) | LEER + VERIFICAR | CRUD | LEER | LEER | LEER |
 | Infracciones | LEER (propias) | CREAR | - | LEER | LEER | LEER |
 | Dashboard en vivo | - | LEER | - | LEER | LEER | LEER |
-| Reportes analíticos | - | - | - | LEER | LEER | LEER |
-| Configuración sede | - | - | - | - | CRUD | - |
-| Usuarios del sistema | - | - | CRUD | LEER | LEER | LEER |
+| Reportes analíticos | - | - | - | LEER | LEER | LEER | LEER |
+| Configuración sede | - | - | - | - | CRUD | - | - |
+| Usuarios del sistema | - | - | CRUD | LEER | LEER | LEER | LEER |
+| Integraciones / APIs | - | - | - | - | - | CRUD | - |

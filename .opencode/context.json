@@ -1,0 +1,37 @@
+{
+  "version": "1.0.0",
+  "session": {
+    "id": null,
+    "phase": "active",
+    "started_at": null,
+    "project_name": null,
+    "tools_called": [
+      "validate",
+      "analyze_project",
+      "work_context_status",
+      "work_context_start"
+    ],
+    "domain": "programming",
+    "task": null,
+    "plan_file": null,
+    "validated_at": null,
+    "friction_events": [],
+    "mutated_targets": [],
+    "blast_radius_targets": []
+  },
+  "workflow": {
+    "mode": "execute",
+    "phase": "idle",
+    "plan_id": null,
+    "approved_at": null,
+    "workflow_compliant": false,
+    "strict_mode": false
+  },
+  "learnings": [],
+  "decisions": [],
+  "integrity": {
+    "last_check": null,
+    "tests_pass": null,
+    "annotations_valid": null
+  }
+}

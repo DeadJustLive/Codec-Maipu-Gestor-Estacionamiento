@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagramas — Sistema Estacionamientos Duoc UC Maipú</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  body { font-family: 'Segoe UI', sans-serif; max-width: 1200px; margin: 0 auto; padding: 2rem; background: #f5f5f5; color: #1a1a1a; }
+  h1 { color: #004481; border-bottom: 3px solid #004481; padding-bottom: 0.5rem; }
+  h2 { color: #004481; margin-top: 3rem; background: #e8f0fe; padding: 0.5rem 1rem; border-radius: 4px; }
+  h3 { color: #333; margin-top: 2rem; }
+  .mermaid { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 1rem 0; text-align: center; cursor: zoom-in; transition: box-shadow 0.2s; overflow: auto; }
+  .mermaid:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+  .mermaid svg { max-width: 100%; height: auto; }
+  .desc { color: #666; font-size: 0.9rem; margin: 0.5rem 0 1.5rem 0; text-align: center; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 2rem 0; }
+  .nav { position: sticky; top: 0; background: #004481; padding: 0.8rem 1rem; border-radius: 4px; margin-bottom: 2rem; z-index: 10; }
+  .nav a { color: white; text-decoration: none; margin-right: 1.5rem; font-size: 0.9rem; }
+  .nav a:hover { text-decoration: underline; }
+  /* Modal overlay for zoom */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center; padding: 2rem; cursor: zoom-out; }
+  .modal-overlay.active { display: flex; }
+  .modal-content { background: white; border-radius: 8px; padding: 2rem; max-width: 95vw; max-height: 90vh; overflow: auto; cursor: default; position: relative; }
+  .modal-content svg { display: block; margin: 0 auto; }
+  .modal-close { position: absolute; top: 0.5rem; right: 0.75rem; font-size: 1.5rem; cursor: pointer; color: #666; background: none; border: none; line-height: 1; }
+  .modal-close:hover { color: #000; }
+  .modal-label { text-align: center; font-weight: 600; color: #004481; margin-bottom: 1rem; font-size: 1.1rem; }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <a href="#actores">Actores</a>
+  <a href="#casos-uso">Casos de Uso</a>
+  <a href="#clases">Clases</a>
+  <a href="#secuencia-asignacion">Secuencia Asignación</a>
+  <a href="#secuencia-verificacion">Secuencia Verificación</a>
+  <a href="#componentes">Componentes</a>
+  <a href="#erd">ERD</a>
+  <a href="#estado-espacio">Estado Espacio</a>
+  <a href="#flujo-asignacion">Flujo Asignación</a>
+</div>
+
+<h1>📐 Diagramas del Sistema</h1>
+<p>Sistema de Gestión Inteligente de Estacionamientos — Duoc UC Sede Maipú</p>
+
+<!-- ============================================================ -->
+<h2 id="actores">1. Actores del Sistema</h2>
+<div class="mermaid">
+graph TD
+    subgraph Actores
+        A[Conductor]
+        B[Guardia]
+        C[Digitador]
+        D[Jefe de Seguridad]
+        E[Jefe Servicios Grales]
+        F[Jefe Servicios Digitales]
+        G[Directivo]
+    end
+    subgraph Plataforma
+        PWA[PWA Única<br/>React + Vite + Tailwind]
+    end
+
+    A -->|RLS filtra| PWA
+    B -->|RLS filtra| PWA
+    C -->|RLS filtra| PWA
+    D -->|RLS filtra| PWA
+    E -->|RLS filtra| PWA
+    F -->|RLS filtra| PWA
+    G -->|RLS filtra| PWA
+</div>
+<p class="desc">7 actores en una sola PWA. RLS en Supabase filtra datos y UI según el rol del usuario autenticado.</p>
+
+<hr>
+
+<!-- ============================================================ -->
+<h2 id="casos-uso">2. Casos de Uso — Vista por Slide</h2>
+
+<div class="slider-container">
+  <div class="slider-controls">
+    <button class="slider-btn" id="prevBtn" title="Anterior">&#9664;</button>
+    <span class="slider-counter" id="slideCounter">1 / 16</span>
+    <button class="slider-btn" id="nextBtn" title="Siguiente">&#9654;</button>
+  </div>
+  <div class="slider-dots" id="slideDots"></div>
+  <div id="slideWrapper" class="slide-wrapper"></div>
+  <p class="desc" id="slideDesc">Use case description</p>
+</div>
+
+<script>
+  var useCases = [
+    { id: "UC-01", name: "Registrarse como Conductor", actors: ["Conductor"], desc: "Conductor se presenta al Digitador para ser registrado en el sistema con RUT, datos personales y vehículo." },
+    { id: "UC-02", name: "Gestionar Vehículos", actors: ["Conductor", "Digitador"], desc: "Conductor o Digitador agrega, edita o elimina vehículos registrados del conductor." },
+    { id: "UC-03", name: "Asignar Espacio", actors: ["Digitador"], desc: "Digitador selecciona conductor y vehículo; sistema asigna el primer espacio libre disponible." },
+    { id: "UC-04", name: "Verificar Espacio", actors: ["Guardia"], desc: "Guardia escanea QR de tarjeta y coteja que la patente real coincida con la asignada." },
+    { id: "UC-05", name: "Liberar Espacio", actors: ["Guardia", "Digitador"], desc: "Guardia o Digitador registra devolución de tarjeta; espacio vuelve al pool de libres." },
+    { id: "UC-06", name: "Reportar Infracción", actors: ["Guardia"], desc: "Si la patente real no coincide con la esperada, Guardia marca infracción y espacio pasa a disputa." },
+    { id: "UC-07", name: "Resolver Infracción", actors: ["Jefe Seguridad"], desc: "Jefe de Seguridad revisa infracciones pendientes y decide anular o aplicar sanción." },
+    { id: "UC-08", name: "Consultar Ocupación en Vivo", actors: ["Guardia", "Jefe Seguridad", "Jefe SG"], desc: "Usuario ve grilla de espacios coloreados por estado, actualizada en tiempo real vía WebSocket." },
+    { id: "UC-09", name: "Gestionar Espacios", actors: ["Digitador", "Jefe SG"], desc: "CRUD de espacios: crear, editar sector/número/tipo, cambiar estado a mantenimiento." },
+    { id: "UC-10", name: "Gestionar Tarjetas", actors: ["Digitador", "Jefe SG"], desc: "Alta de tarjetas con QR único, asignación a espacio, baja por daño o pérdida." },
+    { id: "UC-11", name: "Generar Reportes", actors: ["Jefe Seguridad", "Jefe SG", "Directivo"], desc: "Usuario selecciona tipo de reporte y rango de fechas; sistema consulta vistas materializadas." },
+    { id: "UC-12", name: "Configurar Sede", actors: ["Jefe SG"], desc: "Jefe SG define sectores, cantidad de espacios y reglas de asignación (prioridades, horarios)." },
+    { id: "UC-13", name: "Gestionar Usuarios", actors: ["Digitador", "Jefe SG"], desc: "CRUD de usuarios del sistema con roles: Guardia, Digitador, Jefe, etc." },
+    { id: "UC-14", name: "Enrolar Conductor", actors: ["Digitador"], desc: "Digitador registra conductor nuevo con RUT, datos personales y vehículo en el sistema." },
+    { id: "UC-15", name: "Reportar Incidencia", actors: ["Conductor"], desc: "Conductor abre ticket de incidencia desde la PWA; queda en bandeja del Guardia en turno." },
+    { id: "UC-16", name: "Ver Dashboard Global", actors: ["Directivo"], desc: "Directivo visualiza KPIs: ocupación %, ingresos hoy, tendencia 30d y alertas de capacidad." }
+  ];
+
+  var currentSlide = 0;
+  var slideWrapper = document.getElementById('slideWrapper');
+  var slideCounter = document.getElementById('slideCounter');
+  var slideDesc = document.getElementById('slideDesc');
+  var dotsContainer = document.getElementById('slideDots');
+
+  // Create dots
+  useCases.forEach(function(_, i) {
+    var dot = document.createElement('span');
+    dot.className = 'dot';
+    dot.addEventListener('click', function() { goTo(i); });
+    dotsContainer.appendChild(dot);
+  });
+
+  function renderSlide(index) {
+    var uc = useCases[index];
+    var actors = uc.actors.map(function(a) { return a.replace(/\s+/g, ''); });
+    var lines = ['graph LR'];
+    var actorNodes = [];
+    uc.actors.forEach(function(a, i) {
+      var id = 'A' + i;
+      lines.push('    ' + id + '["' + a + '"]');
+      actorNodes.push(id);
+    });
+    lines.push('    UC["' + uc.id + ': ' + uc.name + '"]');
+    lines.push('    ' + actorNodes.join(' & ') + ' --> UC');
+    var code = lines.join('\n');
+
+    slideWrapper.innerHTML = '<div class="mermaid-slide">' + code + '</div>';
+    slideCounter.textContent = (index + 1) + ' / ' + useCases.length;
+    slideDesc.textContent = uc.desc;
+
+    var dots = dotsContainer.querySelectorAll('.dot');
+    dots.forEach(function(d, i) { d.classList.toggle('active', i === index); });
+
+    // Re-render Mermaid
+    if (window.mermaid) {
+      try { mermaid.run({ nodes: [slideWrapper.querySelector('.mermaid-slide')] }); } catch(e) {}
+    }
+  }
+
+  function goTo(index) {
+    if (index < 0) index = useCases.length - 1;
+    if (index >= useCases.length) index = 0;
+    currentSlide = index;
+    renderSlide(currentSlide);
+  }
+
+  document.getElementById('prevBtn').addEventListener('click', function() { goTo(currentSlide - 1); });
+  document.getElementById('nextBtn').addEventListener('click', function() { goTo(currentSlide + 1); });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowLeft') goTo(currentSlide - 1);
+    if (e.key === 'ArrowRight') goTo(currentSlide + 1);
+  });
+
+  // Initial render
+  renderSlide(0);
+</script>
+
+<style>
+  .slider-container { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 1.5rem; margin: 1rem 0; text-align: center; }
+  .slider-controls { display: flex; justify-content: center; align-items: center; gap: 1.5rem; margin-bottom: 1rem; }
+  .slider-btn { background: #004481; color: white; border: none; border-radius: 4px; padding: 0.5rem 1.2rem; font-size: 1.1rem; cursor: pointer; transition: background 0.2s; }
+  .slider-btn:hover { background: #003366; }
+  .slider-counter { font-weight: 600; color: #004481; font-size: 1rem; min-width: 4rem; }
+  .slider-dots { text-align: center; margin-bottom: 1rem; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #ccc; margin: 0 4px; cursor: pointer; transition: background 0.2s; }
+  .dot.active { background: #004481; }
+  .slide-wrapper { min-height: 200px; display: flex; align-items: center; justify-content: center; }
+  .mermaid-slide { width: 100%; padding: 1rem; }
+  .mermaid-slide svg { max-width: 100%; height: auto; }
+  #slideDesc { margin-top: 0.5rem; font-size: 0.95rem; }
+</style>
+
+<hr>
+
+<!-- ============================================================ -->
+<h2 id="clases">3. Diagrama de Clases (Modelo Lógico)</h2>
+<div class="mermaid">
+classDiagram
+    class Usuario {
+        +uuid id
+        +string rut
+        +string nombre
+        +string email
+        +string telefono
+        +enum rol
+        +timestamptz created_at
+        +boolean activo
+        +registrar()
+        +actualizarDatos()
+    }
+    class Vehiculo {
+        +uuid id
+        +uuid usuario_id
+        +string patente
+        +string marca
+        +string modelo
+        +string color
+        +boolean activo
+        +registrar()
+        +actualizar()
+    }
+    class Espacio {
+        +uuid id
+        +string sector
+        +int numero
+        +enum tipo
+        +enum estado
+        +string sede
+        +asignar()
+        +liberar()
+        +bloquear()
+    }
+    class Tarjeta {
+        +uuid id
+        +string codigo
+        +uuid espacio_id
+        +boolean activa
+        +asignar()
+        +desactivar()
+    }
+    class Asignacion {
+        +uuid id
+        +uuid usuario_id
+        +uuid vehiculo_id
+        +uuid espacio_id
+        +uuid tarjeta_id
+        +timestamptz entrada
+        +timestamptz salida
+        +timestamptz verificada_en
+        +uuid verificada_por
+        +enum estado
+        +crear() jsonb
+        +verificar() jsonb
+        +liberar() jsonb
+    }
+    class Infraccion {
+        +uuid id
+        +uuid asignacion_id
+        +string patente_real
+        +uuid reportada_por
+        +uuid resuelta_por
+        +timestamptz resuelta_en
+        +enum estado
+        +reportar()
+        +resolver()
+    }
+    Usuario "1" --> "*" Vehiculo : posee
+    Usuario "1" --> "*" Asignacion : realiza
+    Espacio "1" --> "*" Asignacion : ocupa
+    Tarjeta "1" --> "*" Asignacion : identifica
+    Asignacion "1" --> "*" Infraccion : genera
+    Usuario "1" --> "*" Infraccion : reporta/resuelve
+</div>
+<p class="desc">6 entidades core con sus relaciones. La lógica de negocio vive en funciones PostgreSQL (asignar, verificar, liberar).</p>
+
+<hr>
+
+<!-- ============================================================ -->
+<h2 id="secuencia-asignacion">4. Diagrama de Secuencia — Flujo de Asignación</h2>
+<div class="mermaid">
+sequenceDiagram
+    participant Conductor
+    participant Digitador
+    participant Sistema
+    participant DB as PostgreSQL
+    participant RT as Supabase Realtime
+    participant PWA as Panel Ocupación
+
+    Note over Conductor,Digitador: Conductor llega a la sede
+    Conductor->>Digitador: Solicita estacionamiento
+    Digitador->>Sistema: Buscar conductor por RUT
+    Sistema->>DB: SELECT * FROM usuarios WHERE rut = p_rut
+    DB-->>Sistema: Conductor + vehículos
+    Sistema-->>Digitador: Lista de vehículos
+    Digitador->>Sistema: Selecciona vehículo
+    Sistema->>DB: SELECT asignar_espacio(p_rut, p_patente)
+    activate DB
+    DB->>DB: Busca espacio libre
+    DB->>DB: INSERT asignacion
+    DB->>DB: UPDATE espacio→ocupado
+    DB-->>Sistema: {sector:A, numero:15, codigo:QR-123}
+    deactivate DB
+    Sistema-->>Digitador: Espacio A-15 asignado
+    Digitador->>Conductor: Entrega tarjeta QR
+    Note over Conductor: Estaciona y cuelga tarjeta
+    Sistema->>RT: Broadcast cambio estado
+    RT-->>PWA: UPDATE espacio A-15 ocupado
+</div>
+<p class="desc">Flujo completo desde que el conductor llega hasta que el panel se actualiza en tiempo real.</p>
+
+<hr>
+
+<!-- ============================================================ -->
+<h2 id="secuencia-verificacion">5. Diagrama de Secuencia — Verificación e Infracción</h2>
+<div class="mermaid">
+sequenceDiagram
+    participant Guardia
+    participant PWA as App PWA
+    participant API as Supabase API
+    participant DB as PostgreSQL
+    participant Conductor
+
+    Guardia->>PWA: Escanea QR de tarjeta
+    PWA->>API: verificar_espacio(codigo)
+    API->>DB: SELECT fn_verificar(p_codigo)
+    DB-->>API: {conductor, patente, espacio, vehiculo}
+    API-->>PWA: Ficha de verificación
+    PWA-->>Guardia: Espacio A-15 | Juan Pérez | ABCD-12
+    alt Patente real coincide
+        Guardia->>PWA: ✅ Marca VERIFICADO OK
+        PWA->>API: UPDATE verificada_en=NOW()
+        API-->>PWA: Confirmación
+        PWA-->>Guardia: Verificación exitosa
+    else Patente real NO coincide
+        Guardia->>PWA: ❌ Marca INFRACCIÓN
+        PWA->>API: INSERT infraccion + estado=en_disputa
+        API-->>PWA: Infracción registrada
+        PWA-->>Guardia: Infracción reportada
+        API-->>Conductor: Notificación: infracción en A-15
+    end
+</div>
+<p class="desc">Flujo crítico de verificación con los dos caminos posibles: OK o infracción.</p>
+
+<hr>
+
+<!-- ============================================================ -->
+<h2 id="componentes">6. Diagrama de Componentes / Paquetes</h2>
+<div class="mermaid">
+graph TB
+    subgraph Frontend["PWA Única (React + Vite + Tailwind)"]
+        COND[Vista Conductor<br/>Mapa, QR, Incidencias]
+        GUARD[Vista Guardia<br/>Escáner, Verificación]
+        DIGI[Vista Digitador<br/>CRUDs, Asignación]
+        JEFE[Vista Jefes<br/>Dashboard, Reportes]
+        ADMIN[Vista Admin<br/>Config, Usuarios]
+    end
+    subgraph Backend["Backend (Supabase)"]
+        PG[(PostgreSQL 15<br/>RLS + Realtime)]
+        SUPABASE_AUTH[Supabase Auth]
+        API[REST + GraphQL]
+        STO[Storage]
+    end
+    subgraph Cloud
+        DEPLOY[Vercel / Google Cloud Run]
+    end
+    subgraph IA
+        AI[Google AI Studio]
+        AG[Antigravity Tool]
+    end
+    Frontend --> API
+    Frontend --> SUPABASE_AUTH
+    Frontend -.->|WebSocket| PG
+    Frontend --> DEPLOY
+    PG --> AI
+    AG --> AI
+    PG --> STO
+</div>
+<p class="desc">Arquitectura simplificada: PWA única con 5 vistas modulares. Frontend conecta directo a Supabase vía REST/WebSocket. Sin backend intermedio gracias a RLS.</p>
+
+<hr>
+
+<!-- ============================================================ -->
+<h2 id="erd">7. Diagrama Entidad-Relación (ERD)</h2>
+<div class="mermaid">
+erDiagram
+    usuarios ||--o{ vehiculos : posee
+    usuarios ||--o{ asignaciones : realiza
+    espacios ||--o{ asignaciones : ocupa
+    tarjetas ||--o{ asignaciones : identifica
+    asignaciones ||--o{ infracciones : genera
+    usuarios {
+        uuid id PK
+        text rut UK
+        text nombre
+        text email
+        text telefono
+        enum rol
+        timestamptz created_at
+        boolean activo
+    }
+    vehiculos {
+        uuid id PK
+        uuid usuario_id FK
+        text patente UK
+        text marca
+        text modelo
+        text color
+        boolean activo
+    }
+    espacios {
+        uuid id PK
+        text sector
+        int numero
+        enum tipo
+        enum estado
+        text sede
+    }
+    tarjetas {
+        uuid id PK
+        text codigo UK
+        uuid espacio_id FK
+        boolean activa
+    }
+    asignaciones {
+        uuid id PK
+        uuid usuario_id FK
+        uuid vehiculo_id FK
+        uuid espacio_id FK
+        uuid tarjeta_id FK
+        timestamptz entrada
+        timestamptz salida
+        timestamptz verificada_en
+        uuid verificada_por FK
+        enum estado
+    }
+    infracciones {
+        uuid id PK
+        uuid asignacion_id FK
+        text patente_real
+        uuid reportada_por FK
+        uuid resuelta_por FK
+        timestamptz resuelta_en
+        enum estado
+    }
+</div>
+<p class="desc">Modelo de datos con 6 tablas, relaciones y tipos de cada columna.</p>
+
+<hr>
+
+<!-- ============================================================ -->
+<h2 id="estado-espacio">8. Diagrama de Estados — Ciclo de Vida del Espacio</h2>
+<div class="mermaid">
+stateDiagram
+    [*] --> Libre
+    Libre --> Ocupado: asignar_espacio()
+    Ocupado --> Verificado: verificar OK
+    Ocupado --> En_Disputa: infracción
+    Verificado --> Libre: liberar_espacio()
+    En_Disputa --> Libre: anular infracción
+    En_Disputa --> Verificado: sanción aplicada
+    Libre --> Mantenimiento: bloquear()
+    Mantenimiento --> Libre: desbloquear()
+</div>
+<p class="desc">Un espacio pasa por 5 estados durante su ciclo de vida operacional.</p>
+
+<hr>
+
+<!-- ============================================================ -->
+<h2 id="flujo-asignacion">9. Diagrama de Flujo — Proceso de Asignación</h2>
+<div class="mermaid">
+flowchart TD
+    A[Conductor llega a sede] --> B[Digitador busca conductor por RUT]
+    B --> C{¿Existe?}
+    C -->|No| D[Crear registro conductor]
+    C -->|Sí| E[Confirmar datos]
+    D --> E
+    E --> F{¿Tiene vehículos?}
+    F -->|No| G[Registrar vehículo]
+    F -->|Sí| H[Seleccionar vehículo]
+    G --> H
+    H --> I[Sistema busca espacio libre]
+    I --> J{¿Hay cupo?}
+    J -->|No| K[Informar: sin disponibilidad]
+    J -->|Sí| L[Asignar espacio + tarjeta]
+    L --> M[Entregar tarjeta QR]
+    M --> N[Conductor estaciona]
+    N --> O[Panel se actualiza en tiempo real]
+</div>
+<p class="desc">Proceso paso a paso desde la llegada del conductor hasta la actualización del panel.</p>
+
+<hr>
+
+<div class="modal-overlay" id="zoomModal">
+  <div class="modal-content" id="zoomContent">
+    <button class="modal-close" id="zoomClose">&times;</button>
+    <div class="modal-label" id="zoomLabel"></div>
+    <div id="zoomBody"></div>
+  </div>
+</div>
+
+<script>
+  function setupZoom(selector) {
+    document.querySelectorAll(selector).forEach(function(el) {
+      el.addEventListener('click', function(e) {
+        if (e.target.closest('.slider-btn') || e.target.closest('.dot')) return;
+        var clone = el.cloneNode(true);
+        clone.style.cursor = 'default';
+        clone.style.padding = '0';
+        clone.style.margin = '0';
+        clone.style.boxShadow = 'none';
+        clone.style.background = 'none';
+        clone.style.overflow = 'visible';
+        var label = el.closest('.slider-container') ? el.closest('.slider-container').previousElementSibling : null;
+        if (!label || label.tagName !== 'H2') label = el.closest('hr') ? el.closest('hr').previousElementSibling : null;
+        var title = label && label.tagName === 'H2' ? label.textContent : '';
+        document.getElementById('zoomLabel').textContent = title;
+        document.getElementById('zoomBody').innerHTML = '';
+        document.getElementById('zoomBody').appendChild(clone);
+        document.getElementById('zoomModal').classList.add('active');
+      });
+    });
+  }
+  setupZoom('.mermaid');
+  setupZoom('.mermaid-slide');
+
+  document.getElementById('zoomModal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('active');
+  });
+  document.getElementById('zoomClose').addEventListener('click', function() {
+    document.getElementById('zoomModal').classList.remove('active');
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') document.getElementById('zoomModal').classList.remove('active');
+  });
+</script>
+
+<p style="text-align:center; color:#666; margin-top:3rem;">
+  Documento generado el 2026-06-05 — Sistema de Gestión de Estacionamientos Duoc UC Sede Maipú
+</p>
+
+</body>
+</html>

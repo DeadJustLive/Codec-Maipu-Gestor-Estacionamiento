@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Codec-Maipu — Presentación Propuesta</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          duoc: { blue: '#004481', green: '#00A650', orange: '#F39200', red: '#E30613' },
+          surface: { DEFAULT: '#0f172a', card: '#1e293b', hover: '#334155' },
+          border: { DEFAULT: '#334155', subtle: '#1e293b' }
+        },
+        fontFamily: { sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'] }
+      }
+    }
+  }
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'dark',
+    themeVariables: {
+      primaryColor: '#1e40af', primaryTextColor: '#f1f5f9', primaryBorderColor: '#3b82f6',
+      lineColor: '#64748b', secondaryColor: '#1e293b', tertiaryColor: '#0f172a',
+      fontSize: '14px'
+    }
+  });
+</script>
+<style>
+  body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+  .slide { display: none; }
+  .slide.active { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .slide.active .slide-content { animation: fadeIn 0.35s ease-out; }
+  .mermaid svg { max-width: 100%; height: auto; }
+  .diagram-wrap svg { max-width: 100%; height: auto; }
+  .hub-dot { transition: all 0.2s; }
+  .hub-dot.active { background: #38bdf8 !important; transform: scale(1.4); box-shadow: 0 0 8px rgba(56,189,248,0.5); }
+  .progress-bar { transition: width 0.35s ease; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #0f172a; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #475569; }
+</style>
+</head>
+<body class="bg-surface text-slate-100 overflow-hidden h-screen w-screen">
+
+<div class="progress-bar fixed top-0 left-0 h-0.5 bg-cyan-400 z-50" id="progressBar" style="width:0%"></div>
+
+<div class="slideshow relative h-screen w-screen" id="slideshow">
+
+  <!-- SLIDE 0: PORTADA -->
+  <div class="slide active" data-index="0">
+    <div class="slide-content w-full max-w-4xl mx-auto px-6 md:px-12 text-center">
+      <div class="text-xs uppercase tracking-[0.2em] text-slate-500 mb-6">Duoc UC · Sede Maipú</div>
+      <h1 class="text-5xl md:text-7xl font-light tracking-tight text-white mb-3">Codec-Maipu</h1>
+      <div class="w-16 h-0.5 bg-cyan-400 mx-auto mb-6"></div>
+      <p class="text-xl md:text-2xl font-light text-slate-300">Sistema de Gestión Inteligente<br>de Estacionamientos</p>
+      <div class="mt-10 flex flex-wrap justify-center gap-3">
+        <span class="px-3 py-1 text-xs border border-slate-700 text-slate-400 rounded-full">React + Vite</span>
+        <span class="px-3 py-1 text-xs border border-slate-700 text-slate-400 rounded-full">Supabase</span>
+        <span class="px-3 py-1 text-xs border border-slate-700 text-slate-400 rounded-full">PWA</span>
+        <span class="px-3 py-1 text-xs border border-slate-700 text-slate-400 rounded-full">QR One-Time</span>
+        <span class="px-3 py-1 text-xs border border-slate-700 text-slate-400 rounded-full">Tailwind + shadcn</span>
+      </div>
+      <div class="mt-12 text-sm text-slate-600 space-y-1">
+        <p><span class="text-slate-400">110 espacios</span> · <span class="text-slate-400">11.000+ estudiantes</span> · <span class="text-slate-400">33 carreras</span></p>
+        <p>Bootcamp CODEC AI — Competencia Intersedes 2026</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 1: PROBLEMA -->
+  <div class="slide" data-index="1">
+    <div class="slide-content w-full max-w-4xl mx-auto px-6 md:px-12">
+      <div class="flex items-center gap-3 mb-2">
+        <span class="text-xs font-mono text-cyan-400">01</span>
+        <div class="h-px flex-1 bg-slate-800"></div>
+      </div>
+      <h2 class="text-3xl md:text-4xl font-light text-white mb-2">El Problema</h2>
+      <p class="text-slate-400 text-lg mb-8">Hoy el estacionamiento opera sin datos. Sin visibilidad, trazabilidad ni analytics.</p>
+      <div class="grid md:grid-cols-3 gap-4">
+        <div class="bg-surface-card border border-slate-800 rounded-xl p-6">
+          <div class="w-10 h-10 rounded-lg bg-red-900/30 border border-red-800/40 flex items-center justify-center text-red-400 text-lg mb-4">!</div>
+          <h3 class="text-white font-medium mb-2">Sin Visibilidad</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Nadie sabe en tiempo real qué espacios están ocupados o libres. Los guardias recorren físicamente.</p>
+        </div>
+        <div class="bg-surface-card border border-slate-800 rounded-xl p-6">
+          <div class="w-10 h-10 rounded-lg bg-red-900/30 border border-red-800/40 flex items-center justify-center text-red-400 text-lg mb-4">!!</div>
+          <h3 class="text-white font-medium mb-2">Sin Trazabilidad</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">No hay registro de qué conductor ocupa qué espacio ni por cuánto tiempo. El chip de barrera solo valida acceso.</p>
+        </div>
+        <div class="bg-surface-card border border-slate-800 rounded-xl p-6">
+          <div class="w-10 h-10 rounded-lg bg-red-900/30 border border-red-800/40 flex items-center justify-center text-red-400 text-lg mb-4">!!!</div>
+          <h3 class="text-white font-medium mb-2">Sin Analytics</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Imposible medir rotación, horas pico, ocupación promedio. Decisiones se toman sin datos.</p>
+        </div>
+      </div>
+      <div class="flex justify-center gap-8 md:gap-12 mt-8 flex-wrap">
+        <div class="text-center"><div class="text-4xl font-light text-white">110</div><div class="text-xs text-slate-500 mt-1">Espacios totales</div></div>
+        <div class="text-center"><div class="text-4xl font-light text-white">11K+</div><div class="text-xs text-slate-500 mt-1">Estudiantes</div></div>
+        <div class="text-center"><div class="text-4xl font-light text-white">33</div><div class="text-xs text-slate-500 mt-1">Carreras</div></div>
+        <div class="text-center"><div class="text-4xl font-light text-red-400">0</div><div class="text-xs text-slate-500 mt-1">Datos hoy</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 2: SOLUCIÓN -->
+  <div class="slide" data-index="2">
+    <div class="slide-content w-full max-w-4xl mx-auto px-6 md:px-12">
+      <div class="flex items-center gap-3 mb-2">
+        <span class="text-xs font-mono text-cyan-400">02</span>
+        <div class="h-px flex-1 bg-slate-800"></div>
+      </div>
+      <h2 class="text-3xl md:text-4xl font-light text-white mb-2">La Solución</h2>
+      <p class="text-slate-400 text-lg mb-8">Sistema híbrido físico+digital que digitaliza todo el ciclo de vida del estacionamiento.</p>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="bg-surface-card border border-slate-800 rounded-xl p-6">
+          <div class="w-10 h-10 rounded-lg bg-emerald-900/30 border border-emerald-800/40 flex items-center justify-center text-emerald-400 text-lg mb-4">✓</div>
+          <h3 class="text-white font-medium mb-2">Tarjetas Físicas con QR</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Cada conductor recibe una tarjeta con código QR único al asignar espacio. Validación one-time en DB.</p>
+        </div>
+        <div class="bg-surface-card border border-slate-800 rounded-xl p-6">
+          <div class="w-10 h-10 rounded-lg bg-emerald-900/30 border border-emerald-800/40 flex items-center justify-center text-emerald-400 text-lg mb-4">✓</div>
+          <h3 class="text-white font-medium mb-2">PWA Multirrol</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Una sola app web progresiva. 7 roles con UI filtrada por RLS. Sin instalar, sin app stores.</p>
+        </div>
+        <div class="bg-surface-card border border-slate-800 rounded-xl p-6">
+          <div class="w-10 h-10 rounded-lg bg-emerald-900/30 border border-emerald-800/40 flex items-center justify-center text-emerald-400 text-lg mb-4">✓</div>
+          <h3 class="text-white font-medium mb-2">Tiempo Real</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Mapa interactivo de 110 espacios actualizado en &lt;500ms vía WebSocket. Ocupación visible al segundo.</p>
+        </div>
+        <div class="bg-surface-card border border-slate-800 rounded-xl p-6">
+          <div class="w-10 h-10 rounded-lg bg-emerald-900/30 border border-emerald-800/40 flex items-center justify-center text-emerald-400 text-lg mb-4">✓</div>
+          <h3 class="text-white font-medium mb-2">Canal de Comunicación</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Sistema de tickets conductor-guardia para incidencias. Notificaciones push en tiempo real.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 3: ARQUITECTURA -->
+  <div class="slide" data-index="3">
+    <div class="slide-content w-full max-w-5xl mx-auto px-6 md:px-12">
+      <div class="flex items-center gap-3 mb-2">
+        <span class="text-xs font-mono text-cyan-400">03</span>
+        <div class="h-px flex-1 bg-slate-800"></div>
+      </div>
+      <h2 class="text-3xl md:text-4xl font-light text-white mb-2">Arquitectura</h2>
+      <p class="text-slate-400 text-lg mb-6">Sin servidores propios. Frontend conecta directo a Supabase. RLS como única barrera de seguridad.</p>
+      <div class="bg-surface-card border border-slate-800 rounded-xl p-4 md:p-6 cursor-zoom-in" onclick="zoomDiagram(this)">
+        <div class="mermaid">
+graph TB
+    subgraph FW["PWA Única"]
+        COND[Vista Conductor]
+        GUARD[Vista Guardia]
+        DIGI[Vista Digitador]
+        JEFE[Vista Jefes]
+        ADMIN[Vista Admin]
+    end
+    subgraph BK["Backend Supabase"]
+        PG[(PostgreSQL 15)]
+        AUTH[Auth]
+        API[REST + GraphQL]
+    end
+    subgraph INF["Deploy"]
+        DEPLOY[Vercel / GCP]
+    end
+    FW --> API & AUTH
+    FW -.->|Realtime| PG
+    FW --> DEPLOY
+</div>
+      </div>
+      <div class="flex justify-center gap-3 mt-4 flex-wrap">
+        <span class="px-3 py-1 text-xs bg-slate-800 text-slate-300 rounded-full border border-slate-700">Lógica en DB</span>
+        <span class="px-3 py-1 text-xs bg-slate-800 text-slate-300 rounded-full border border-slate-700">Frontend tonto</span>
+        <span class="px-3 py-1 text-xs bg-slate-800 text-slate-300 rounded-full border border-slate-700">RLS como firewall</span>
+        <span class="px-3 py-1 text-xs bg-slate-800 text-slate-300 rounded-full border border-slate-700">Offline read-only</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 4: ACTORES + CASOS DE USO (sub-slides) -->
+  <div class="slide" data-index="4">
+    <div class="slide-content w-full max-w-4xl mx-auto px-6 md:px-12">
+      <div class="flex items-center gap-3 mb-2">
+        <span class="text-xs font-mono text-cyan-400">04</span>
+        <div class="h-px flex-1 bg-slate-800"></div>
+      </div>
+      <h2 class="text-3xl md:text-4xl font-light text-white mb-2">Casos de Uso</h2>
+      <p class="text-slate-400 text-lg mb-4">16 casos de uso mapeados a 6 actores operativos del sistema.</p>
+      <div class="bg-surface-card border border-slate-800 rounded-xl p-5 md:p-6">
+        <div class="flex items-center justify-between mb-4">
+          <button class="uc-nav text-slate-400 hover:text-white text-lg px-3 py-1 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 transition-colors border border-slate-700/50" id="ucPrev">&#9664;</button>
+          <span class="text-sm text-slate-500 font-mono" id="ucCounter">1 / 16</span>
+          <button class="uc-nav text-slate-400 hover:text-white text-lg px-3 py-1 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 transition-colors border border-slate-700/50" id="ucNext">&#9654;</button>
+        </div>
+        <div class="flex justify-center gap-1.5 mb-5" id="ucDots"></div>
+        <div id="ucBody" class="min-h-[240px] flex flex-col items-center justify-center"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function() {
+  var ucList = [
+    { id: "UC-01", name: "Registrarse como Conductor", actors: ["Conductor"], desc: "Conductor se presenta al Digitador para ser registrado en el sistema con RUT, datos personales y vehículo." },
+    { id: "UC-02", name: "Gestionar Vehículos", actors: ["Conductor", "Digitador"], desc: "Conductor o Digitador agrega, edita o elimina vehículos registrados." },
+    { id: "UC-03", name: "Asignar Espacio", actors: ["Digitador"], desc: "Digitador selecciona conductor y vehículo; sistema asigna el primer espacio libre disponible." },
+    { id: "UC-04", name: "Verificar Espacio", actors: ["Guardia"], desc: "Guardia escanea QR de tarjeta y coteja que la patente real coincida con la asignada." },
+    { id: "UC-05", name: "Liberar Espacio", actors: ["Guardia", "Digitador"], desc: "Guardia o Digitador registra devolución de tarjeta; espacio vuelve al pool de libres." },
+    { id: "UC-06", name: "Reportar Infracción", actors: ["Guardia"], desc: "Patente real no coincide con esperada; Guardia marca infracción, espacio pasa a disputa." },
+    { id: "UC-07", name: "Resolver Infracción", actors: ["Jefe Seguridad"], desc: "Jefe de Seguridad revisa infracciones pendientes y decide anular o aplicar sanción." },
+    { id: "UC-08", name: "Consultar Ocupación en Vivo", actors: ["Guardia", "Jefe Seguridad", "Jefe SG"], desc: "Grilla de espacios coloreados por estado, actualizada en tiempo real vía WebSocket." },
+    { id: "UC-09", name: "Gestionar Espacios", actors: ["Digitador", "Jefe SG"], desc: "CRUD de espacios: crear, editar sector/número/tipo, cambiar estado a mantenimiento." },
+    { id: "UC-10", name: "Gestionar Tarjetas", actors: ["Digitador", "Jefe SG"], desc: "Alta de tarjetas con QR único, asignación a espacio, baja por daño o pérdida." },
+    { id: "UC-11", name: "Generar Reportes", actors: ["Jefe Seguridad", "Jefe SG", "Directivo"], desc: "Selecciona tipo de reporte y rango de fechas; sistema consulta vistas materializadas." },
+    { id: "UC-12", name: "Configurar Sede", actors: ["Jefe SG"], desc: "Jefe SG define sectores, cantidad de espacios y reglas de asignación." },
+    { id: "UC-13", name: "Gestionar Usuarios", actors: ["Digitador", "Jefe SG"], desc: "CRUD de usuarios del sistema con roles: Guardia, Digitador, Jefe, etc." },
+    { id: "UC-14", name: "Enrolar Conductor", actors: ["Digitador"], desc: "Digitador registra conductor nuevo con RUT, datos personales y vehículo." },
+    { id: "UC-15", name: "Reportar Incidencia", actors: ["Conductor"], desc: "Conductor abre ticket de incidencia desde la PWA; queda en bandeja del Guardia." },
+    { id: "UC-16", name: "Ver Dashboard Global", actors: ["Directivo"], desc: "Directivo visualiza KPIs: ocupación %, ingresos hoy, tendencia 30d, alertas de capacidad." }
+  ];
+  var ucIndex = 0;
+  var ucBody = document.getElementById('ucBody');
+  var ucCounter = document.getElementById('ucCounter');
+  var ucDots = document.getElementById('ucDots');
+
+  ucList.forEach(function(_, i) {
+    var d = document.createElement('button');
+    d.className = 'w-2 h-2 rounded-full bg-slate-700 border-0 cursor-pointer transition-all duration-200' + (i === 0 ? ' bg-cyan-400 scale-125' : '');
+    d.addEventListener('click', function() { renderUC(i); });
+    ucDots.appendChild(d);
+  });
+
+  function renderUC(idx) {
+    ucIndex = idx;
+    var uc = ucList[idx];
+    var actorIds = uc.actors.map(function(_, i) { return 'A' + i; });
+    var mermaidCode = 'graph LR\n';
+    uc.actors.forEach(function(a, i) {
+      mermaidCode += '    A' + i + '["' + a + '"]\n';
+    });
+    mermaidCode += '    UC["' + uc.id + ': ' + uc.name + '"]\n';
+    mermaidCode += '    ' + actorIds.join(' & ') + ' --> UC\n';
+
+    ucBody.innerHTML = '';
+    ucBody.innerHTML = '<div class="w-full text-center mb-3"><div class="text-xs font-mono text-cyan-400 mb-1">' + uc.id + '</div><div class="text-white font-medium text-lg">' + uc.name + '</div></div><div class="mermaid w-full cursor-zoom-in" onclick="zoomDiagram(this)">' + mermaidCode + '</div><div class="text-sm text-slate-400 mt-3 max-w-lg mx-auto text-center">' + uc.desc + '</div>';
+    ucCounter.textContent = (idx + 1) + ' / ' + ucList.length;
+
+    var dots = ucDots.querySelectorAll('button');
+    dots.forEach(function(d, i) {
+      d.className = 'w-2 h-2 rounded-full bg-slate-700 border-0 cursor-pointer transition-all duration-200' + (i === idx ? ' bg-cyan-400 scale-125' : '');
+    });
+
+    setTimeout(function() {
+      if (typeof mermaid !== 'undefined') {
+        try { mermaid.run({ nodes: Array.from(ucBody.querySelectorAll('.mermaid')) }); } catch(e) {}
+      }
+    }, 50);
+  }
+
+  document.getElementById('ucPrev').addEventListener('click', function() { renderUC(ucIndex > 0 ? ucIndex - 1 : ucList.length - 1); });
+  document.getElementById('ucNext').addEventListener('click', function() { renderUC(ucIndex < ucList.length - 1 ? ucIndex + 1 : 0); });
+
+  // Arrow keys on slide 4 navigate sub-slides
+  document.addEventListener('keydown', function(e) {
+    var active = document.querySelector('.slide.active');
+    if (active && parseInt(active.dataset.index) === 4) {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); e.stopImmediatePropagation(); renderUC(ucIndex < ucList.length - 1 ? ucIndex + 1 : 0); }
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); e.stopImmediatePropagation(); renderUC(ucIndex > 0 ? ucIndex - 1 : ucList.length - 1); }
+    }
+  });
+
+  renderUC(0);
+})();
+</script>
+
+  <!-- SLIDE 5: MAPA INTERACTIVO -->
+  <div class="slide" data-index="5">
+    <div class="slide-content w-full max-w-4xl mx-auto px-6 md:px-12">
+      <div class="flex items-center gap-3 mb-2">
+        <span class="text-xs font-mono text-cyan-400">05</span>
+        <div class="h-px flex-1 bg-slate-800"></div>
+      </div>
+      <h2 class="text-3xl md:text-4xl font-light text-white mb-2">Mapa Interactivo</h2>
+      <p class="text-slate-400 text-lg mb-8">110 espacios — 4 sectores (A:20, B:30, C:30, D:30). Código de colores por estado.</p>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div>
+          <h3 class="text-white font-medium mb-3 text-sm uppercase tracking-wider text-slate-500">Código de Colores</h3>
+          <div class="space-y-2">
+            <div class="flex items-center gap-3 text-sm"><span class="w-3 h-3 rounded-full bg-emerald-500"></span><span class="text-slate-300">Libre</span></div>
+            <div class="flex items-center gap-3 text-sm"><span class="w-3 h-3 rounded-full bg-blue-500"></span><span class="text-slate-300">Ocupado</span></div>
+            <div class="flex items-center gap-3 text-sm"><span class="w-3 h-3 rounded-full bg-amber-500"></span><span class="text-slate-300">Reservado / Discapacitado</span></div>
+            <div class="flex items-center gap-3 text-sm"><span class="w-3 h-3 rounded-full bg-red-500"></span><span class="text-slate-300">Mantenimiento / Infracción</span></div>
+            <div class="flex items-center gap-3 text-sm"><span class="w-3 h-3 rounded-full bg-yellow-300"></span><span class="text-slate-300">Tu espacio asignado</span></div>
+          </div>
+        </div>
+        <div class="space-y-6">
+          <div>
+            <h3 class="text-white font-medium mb-2 text-sm uppercase tracking-wider text-slate-500">Tooltips</h3>
+            <p class="text-sm text-slate-400 leading-relaxed">Hover sobre cada espacio: sector + número + estado + (ocupado: patente, hora, tiempo).</p>
+          </div>
+          <div>
+            <h3 class="text-white font-medium mb-2 text-sm uppercase tracking-wider text-slate-500">Entrada / Salida</h3>
+            <p class="text-sm text-slate-400 leading-relaxed">Flechas SVG verdes (ENTRADA) y rojas (SALIDA). Sin brújula ni norte.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 6: FLUJO ASIGNACIÓN -->
+  <div class="slide" data-index="6">
+    <div class="slide-content w-full max-w-5xl mx-auto px-6 md:px-12">
+      <div class="flex items-center gap-3 mb-2">
+        <span class="text-xs font-mono text-cyan-400">06</span>
+        <div class="h-px flex-1 bg-slate-800"></div>
+      </div>
+      <h2 class="text-3xl md:text-4xl font-light text-white mb-2">Flujo de Asignación</h2>
+      <p class="text-slate-400 text-lg mb-6">Desde que el conductor llega hasta que el panel se actualiza en tiempo real.</p>
+      <div class="bg-surface-card border border-slate-800 rounded-xl p-4 md:p-6 cursor-zoom-in" onclick="zoomDiagram(this)">
+        <div class="mermaid" style="font-size:12px;">
+sequenceDiagram
+    participant C as Conductor
+    participant D as Digitador
+    participant S as Sistema
+    participant DB as PostgreSQL
+    participant RT as Supabase Realtime
+    Note over C,D: Conductor llega a la sede
+    C->>D: Solicita estacionamiento
+    D->>S: Buscar por RUT
+    S->>DB: SELECT * FROM usuarios
+    DB-->>S: Conductor + vehículos
+    S-->>D: Lista de vehículos
+    D->>S: Selecciona vehículo
+    S->>DB: SELECT asignar_espacio()
+    activate DB
+    DB->>DB: Busca espacio libre
+    DB->>DB: INSERT asignacion
+    DB->>DB: UPDATE espacio
+    DB-->>S: Sector A-15
+    deactivate DB
+    S-->>D: Espacio asignado
+    D->>C: Entrega tarjeta QR
+    Note over C: Estaciona
+    S->>RT: Broadcast
+    RT-->>S: Panel actualizado
+</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 7: QR ONE-TIME -->
+  <div class="slide" data-index="7">
+    <div class="slide-content w-full max-w-4xl mx-auto px-6 md:px-12">
+      <div class="flex items-center gap-3 mb-2">
+        <span class="text-xs font-mono text-cyan-400">07</span>
+        <div class="h-px flex-1 bg-slate-800"></div>
+      </div>
+      <h2 class="text-3xl md:text-4xl font-light text-white mb-2">QR One-Time</h2>
+      <p class="text-slate-400 text-lg mb-8">Validación atómica en base de datos. Cada QR usable una sola vez.</p>
+      <div class="bg-surface-card border border-slate-800 rounded-xl p-6 mb-6">
+        <pre class="text-sm font-mono text-slate-300 leading-relaxed overflow-x-auto"><span class="text-cyan-400">BEGIN;</span>
+<span class="text-emerald-400">UPDATE</span> tarjetas <span class="text-emerald-400">SET</span> activa = <span class="text-red-400">false</span>
+<span class="text-emerald-400">WHERE</span> codigo = p_codigo_qr <span class="text-emerald-400">AND</span> activa = <span class="text-red-400">true</span>
+<span class="text-emerald-400">RETURNING</span> id, espacio_id;
+<span class="text-slate-600">-- 0 filas → QR ya usado</span>
+<span class="text-cyan-400">COMMIT;</span></pre>
+      </div>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="bg-surface-card border border-slate-800 rounded-xl p-5">
+          <h3 class="text-white font-medium mb-1 text-sm">Seguro</h3>
+          <p class="text-sm text-slate-400">UUID único por tarjeta. Imposible de adivinar o reusar. DB rechaza segundo escaneo.</p>
+        </div>
+        <div class="bg-surface-card border border-slate-800 rounded-xl p-5">
+          <h3 class="text-white font-medium mb-1 text-sm">Rápido</h3>
+          <p class="text-sm text-slate-400">Una query atómica. Sin locks ni race conditions. Validación en &lt;100ms.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 8: CICLO DE VIDA ESPACIO -->
+  <div class="slide" data-index="8">
+    <div class="slide-content w-full max-w-4xl mx-auto px-6 md:px-12">
+      <div class="flex items-center gap-3 mb-2">
+        <span class="text-xs font-mono text-cyan-400">08</span>
+        <div class="h-px flex-1 bg-slate-800"></div>
+      </div>
+      <h2 class="text-3xl md:text-4xl font-light text-white mb-2">Ciclo de Vida del Espacio</h2>
+      <p class="text-slate-400 text-lg mb-6">Un espacio pasa por 5 estados durante su ciclo de vida operacional.</p>
+      <div class="bg-surface-card border border-slate-800 rounded-xl p-4 md:p-6 cursor-zoom-in" onclick="zoomDiagram(this)">
+        <div class="mermaid">
+stateDiagram
+    [*] --> Libre
+    Libre --> Ocupado: asignar()
+    Ocupado --> Verificado: verificar OK
+    Ocupado --> En_Disputa: infracción
+    Verificado --> Libre: liberar()
+    En_Disputa --> Libre: anular
+    En_Disputa --> Verificado: sanción
+    Libre --> Mantenimiento: bloquear()
+    Mantenimiento --> Libre: desbloquear()
+</div>
+      </div>
+      <div class="flex justify-center gap-3 mt-4 flex-wrap">
+        <span class="px-3 py-1 text-xs bg-emerald-900/30 text-emerald-400 border border-emerald-800/40 rounded-full">Libre</span>
+        <span class="px-3 py-1 text-xs bg-blue-900/30 text-blue-400 border border-blue-800/40 rounded-full">Ocupado</span>
+        <span class="px-3 py-1 text-xs bg-cyan-900/30 text-cyan-400 border border-cyan-800/40 rounded-full">Verificado</span>
+        <span class="px-3 py-1 text-xs bg-amber-900/30 text-amber-400 border border-amber-800/40 rounded-full">En Disputa</span>
+        <span class="px-3 py-1 text-xs bg-red-900/30 text-red-400 border border-red-800/40 rounded-full">Mantenimiento</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 9: TICKETS -->
+  <div class="slide" data-index="9">
+    <div class="slide-content w-full max-w-4xl mx-auto px-6 md:px-12">
+      <div class="flex items-center gap-3 mb-2">
+        <span class="text-xs font-mono text-cyan-400">09</span>
+        <div class="h-px flex-1 bg-slate-800"></div>
+      </div>
+      <h2 class="text-3xl md:text-4xl font-light text-white mb-2">Canal Conductor-Guardia</h2>
+      <p class="text-slate-400 text-lg mb-8">Sistema de tickets con notificaciones en tiempo real.</p>
+      <div class="grid md:grid-cols-3 gap-4">
+        <div class="bg-surface-card border border-slate-800 rounded-xl p-5">
+          <div class="w-8 h-8 rounded-lg bg-emerald-900/30 border border-emerald-800/40 flex items-center justify-center text-emerald-400 text-sm mb-3">01</div>
+          <h3 class="text-white font-medium mb-1 text-sm">Abrir Ticket</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">Conductor describe el problema. Ticket queda "abierto".</p>
+        </div>
+        <div class="bg-surface-card border border-slate-800 rounded-xl p-5">
+          <div class="w-8 h-8 rounded-lg bg-amber-900/30 border border-amber-800/40 flex items-center justify-center text-amber-400 text-sm mb-3">02</div>
+          <h3 class="text-white font-medium mb-1 text-sm">En Curso</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">Guardia recibe notificación push y asigna a su bandeja.</p>
+        </div>
+        <div class="bg-surface-card border border-slate-800 rounded-xl p-5">
+          <div class="w-8 h-8 rounded-lg bg-blue-900/30 border border-blue-800/40 flex items-center justify-center text-blue-400 text-sm mb-3">03</div>
+          <h3 class="text-white font-medium mb-1 text-sm">Resuelto</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">Guardia responde, sistema notifica. Ticket se cierra.</p>
+        </div>
+      </div>
+      <div class="flex justify-center gap-2 mt-6 flex-wrap">
+        <span class="px-3 py-1 text-xs bg-slate-800 text-slate-400 rounded-full">Historial completo</span>
+        <span class="px-3 py-1 text-xs bg-slate-800 text-slate-400 rounded-full">Mensajes con timestamp</span>
+        <span class="px-3 py-1 text-xs bg-slate-800 text-slate-400 rounded-full">4 estados</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 10: MODELO DATOS -->
+  <div class="slide" data-index="10">
+    <div class="slide-content w-full max-w-5xl mx-auto px-6 md:px-12">
+      <div class="flex items-center gap-3 mb-2">
+        <span class="text-xs font-mono text-cyan-400">10</span>
+        <div class="h-px flex-1 bg-slate-800"></div>
+      </div>
+      <h2 class="text-3xl md:text-4xl font-light text-white mb-2">Modelo de Datos</h2>
+      <p class="text-slate-400 text-lg mb-6">6 tablas, lógica de negocio en funciones PostgreSQL.</p>
+      <div class="bg-surface-card border border-slate-800 rounded-xl p-4 md:p-6 cursor-zoom-in" onclick="zoomDiagram(this)">
+        <div class="mermaid">
+erDiagram
+    usuarios ||--o{ vehiculos : posee
+    usuarios ||--o{ asignaciones : realiza
+    espacios ||--o{ asignaciones : ocupa
+    tarjetas ||--o{ asignaciones : identifica
+    asignaciones ||--o{ infracciones : genera
+    usuarios { uuid id PK text rut text nombre text email enum rol }
+    vehiculos { uuid id PK uuid usuario_id FK text patente text marca }
+    espacios { uuid id PK text sector int numero enum tipo enum estado }
+    tarjetas { uuid id PK text codigo uuid espacio_id FK boolean activa }
+    asignaciones { uuid id PK uuid usuario_id FK uuid vehiculo_id FK uuid espacio_id FK uuid tarjeta_id FK timestamptz entrada timestamptz salida enum estado }
+    infracciones { uuid id PK uuid asignacion_id FK text patente_real uuid reportada_por FK enum estado }
+</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 11: DASHBOARD -->
+  <div class="slide" data-index="11">
+    <div class="slide-content w-full max-w-4xl mx-auto px-6 md:px-12">
+      <div class="flex items-center gap-3 mb-2">
+        <span class="text-xs font-mono text-cyan-400">11</span>
+        <div class="h-px flex-1 bg-slate-800"></div>
+      </div>
+      <h2 class="text-3xl md:text-4xl font-light text-white mb-2">Dashboard &amp; KPIs</h2>
+      <p class="text-slate-400 text-lg mb-8">Analítica completa para decisiones basadas en datos.</p>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div>
+          <h3 class="text-white font-medium mb-3 text-sm uppercase tracking-wider text-slate-500">KPIs en Vivo</h3>
+          <ul class="space-y-2 text-sm text-slate-400">
+            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>Ocupación actual %</li>
+            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>Ingresos / egresos hoy</li>
+            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>Tiempo de estadía promedio</li>
+            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>Infracciones pendientes</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="text-white font-medium mb-3 text-sm uppercase tracking-wider text-slate-500">Tendencias</h3>
+          <ul class="space-y-2 text-sm text-slate-400">
+            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Rotación por hora (top 5)</li>
+            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Ocupación diaria (30 días)</li>
+            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Tendencia mensual y anual</li>
+            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Proyección de demanda</li>
+          </ul>
+        </div>
+      </div>
+      <div class="mt-6 bg-amber-900/20 border border-amber-800/30 rounded-xl p-4">
+        <p class="text-sm text-amber-300"><span class="font-medium">Alertas:</span> Ocupación &gt;85% 1h → notificar. &gt;85% 7d consecutivos → alerta de expansión.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 12: PLAN -->
+  <div class="slide" data-index="12">
+    <div class="slide-content w-full max-w-4xl mx-auto px-6 md:px-12">
+      <div class="flex items-center gap-3 mb-2">
+        <span class="text-xs font-mono text-cyan-400">12</span>
+        <div class="h-px flex-1 bg-slate-800"></div>
+      </div>
+      <h2 class="text-3xl md:text-4xl font-light text-white mb-2">Plan de Trabajo</h2>
+      <p class="text-slate-400 text-lg mb-8">5 checkpoints, 16 épicas, Scrum 2020.</p>
+      <div class="space-y-3">
+        <div class="bg-surface-card border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+          <div class="flex items-center gap-4"><span class="w-8 h-8 rounded-lg bg-cyan-900/30 text-cyan-400 text-sm flex items-center justify-center font-mono">CP1</span><div><div class="text-white text-sm font-medium">Base + Auth + Mapa + QR</div><div class="text-xs text-slate-500">Setup del proyecto, autenticación, mapa SVG</div></div></div>
+          <span class="text-xs text-slate-600">4 épicas</span>
+        </div>
+        <div class="bg-surface-card border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+          <div class="flex items-center gap-4"><span class="w-8 h-8 rounded-lg bg-emerald-900/30 text-emerald-400 text-sm flex items-center justify-center font-mono">CP2</span><div><div class="text-white text-sm font-medium">CRUD + Asignación + Verificación</div><div class="text-xs text-slate-500">Operación core del sistema</div></div></div>
+          <span class="text-xs text-slate-600">4 épicas</span>
+        </div>
+        <div class="bg-surface-card border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+          <div class="flex items-center gap-4"><span class="w-8 h-8 rounded-lg bg-amber-900/30 text-amber-400 text-sm flex items-center justify-center font-mono">CP3</span><div><div class="text-white text-sm font-medium">Tickets + Infracciones + Tiempo Real</div><div class="text-xs text-slate-500">Comunicación y monitoreo</div></div></div>
+          <span class="text-xs text-slate-600">3 épicas</span>
+        </div>
+        <div class="bg-surface-card border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+          <div class="flex items-center gap-4"><span class="w-8 h-8 rounded-lg bg-purple-900/30 text-purple-400 text-sm flex items-center justify-center font-mono">CP4</span><div><div class="text-white text-sm font-medium">Dashboard + Reportes + Métricas</div><div class="text-xs text-slate-500">Analítica y rotación</div></div></div>
+          <span class="text-xs text-slate-600">3 épicas</span>
+        </div>
+        <div class="bg-surface-card border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+          <div class="flex items-center gap-4"><span class="w-8 h-8 rounded-lg bg-red-900/30 text-red-400 text-sm flex items-center justify-center font-mono">CP5</span><div><div class="text-white text-sm font-medium">Offline + QA + Deploy + Pitch</div><div class="text-xs text-slate-500">Calidad y presentación final</div></div></div>
+          <span class="text-xs text-slate-600">2 épicas</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 13: COSTO -->
+  <div class="slide" data-index="13">
+    <div class="slide-content w-full max-w-4xl mx-auto px-6 md:px-12">
+      <div class="flex items-center gap-3 mb-2">
+        <span class="text-xs font-mono text-cyan-400">13</span>
+        <div class="h-px flex-1 bg-slate-800"></div>
+      </div>
+      <h2 class="text-3xl md:text-4xl font-light text-white mb-2">Costo: $0 / mes</h2>
+      <p class="text-slate-400 text-lg mb-8">100% Free Tier. Upgrade opcional a $45/mes si se necesita.</p>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-surface-card border border-emerald-800/40 rounded-xl p-6">
+          <h3 class="text-emerald-400 font-medium mb-4 text-sm uppercase tracking-wider">Free Tier</h3>
+          <ul class="space-y-2 text-sm text-slate-400">
+            <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span>Supabase Free: 500MB DB, 50k usuarios</li>
+            <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span>Vercel Hobby: deploy ilimitado, CDN, SSL</li>
+            <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span>Google AI Studio: generación de código</li>
+          </ul>
+          <div class="mt-4 pt-4 border-t border-slate-800 text-2xl font-light text-emerald-400">$0 <span class="text-sm text-slate-600">/mes</span></div>
+        </div>
+        <div class="bg-surface-card border border-slate-800 rounded-xl p-6">
+          <h3 class="text-amber-400 font-medium mb-4 text-sm uppercase tracking-wider">Upgrade (opcional)</h3>
+          <ul class="space-y-2 text-sm text-slate-400">
+            <li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">→</span>Supabase Pro: $25/mes</li>
+            <li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">→</span>Vercel Pro: $20/mes</li>
+            <li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">→</span>Dentro del presupuesto de $50/mes</li>
+          </ul>
+          <div class="mt-4 pt-4 border-t border-slate-800 text-2xl font-light text-amber-400">$45 <span class="text-sm text-slate-600">/mes</span></div>
+        </div>
+      </div>
+      <div class="flex justify-center gap-3 mt-6 flex-wrap">
+        <span class="px-3 py-1 text-xs bg-slate-800 text-slate-400 rounded-full">Sin servidores</span>
+        <span class="px-3 py-1 text-xs bg-slate-800 text-slate-400 rounded-full">Sin costos fijos</span>
+        <span class="px-3 py-1 text-xs bg-slate-800 text-slate-400 rounded-full">Escala automática</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 14: CIERRE -->
+  <div class="slide" data-index="14">
+    <div class="slide-content w-full max-w-4xl mx-auto px-6 md:px-12 text-center">
+      <div class="text-xs uppercase tracking-[0.2em] text-slate-500 mb-8">Codec-Maipu</div>
+      <div class="w-16 h-0.5 bg-cyan-400 mx-auto mb-8"></div>
+      <p class="text-2xl md:text-3xl font-light text-white leading-relaxed">
+        De 110 espacios sin datos a<br>
+        <span class="text-cyan-400 font-normal">una sede inteligente</span>
+      </p>
+      <div class="mt-8 text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
+        Tecnología que transforma la operación diaria.<br>
+        Datos que habilitan decisiones estratégicas.<br>
+        Una PWA para todos los roles.
+      </div>
+      <div class="flex justify-center gap-3 mt-8 flex-wrap">
+        <span class="px-3 py-1 text-xs border border-slate-700 text-slate-500 rounded-full">#CODEC AI</span>
+        <span class="px-3 py-1 text-xs border border-slate-700 text-slate-500 rounded-full">#DuocUC</span>
+        <span class="px-3 py-1 text-xs border border-slate-700 text-slate-500 rounded-full">#Maipú</span>
+        <span class="px-3 py-1 text-xs border border-slate-700 text-slate-500 rounded-full">#SmartParking</span>
+      </div>
+      <p class="mt-10 text-xs text-slate-700">Bootcamp CODEC AI — Duoc UC Sede Maipú · 2026</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="hub fixed top-4 right-4 z-40 flex flex-col items-end gap-2">
+  <div class="flex items-center gap-2">
+    <button class="hub-fullscreen text-slate-500 hover:text-white text-sm px-2 py-1 bg-surface-card/80 backdrop-blur border border-slate-800 rounded-lg transition-colors" id="fullscreenBtn" title="Pantalla completa">⛶</button>
+    <span class="text-xs text-slate-600 bg-surface-card/80 backdrop-blur px-2 py-1 rounded-lg border border-slate-800" id="slideCounter">1 / 15</span>
+  </div>
+  <div class="hub-dots bg-surface-card/80 backdrop-blur border border-slate-800 rounded-lg p-2 flex flex-col gap-1.5" id="hubDots"></div>
+</div>
+
+<div class="modal-overlay fixed inset-0 bg-black/85 z-50 hidden justify-center items-center p-4 md:p-8" id="zoomModal">
+  <div class="modal-content bg-surface-card border border-slate-800 rounded-xl p-6 max-w-[90vw] max-h-[85vh] overflow-auto relative">
+    <button class="modal-close absolute top-3 right-4 text-slate-500 hover:text-white text-2xl bg-none border-none cursor-pointer" id="zoomClose">&times;</button>
+    <div id="zoomBody"></div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var slides = document.querySelectorAll('.slide');
+  var total = slides.length;
+  var current = 0;
+  var dotsContainer = document.getElementById('hubDots');
+  var progressBar = document.getElementById('progressBar');
+  var slideCounter = document.getElementById('slideCounter');
+  for (var i = 0; i < total; i++) {
+    var dot = document.createElement('button');
+    dot.className = 'hub-dot w-2 h-2 rounded-full bg-slate-700 border-0 cursor-pointer' + (i === 0 ? ' active' : '');
+    dot.setAttribute('aria-label', 'Slide ' + (i + 1));
+    dot.addEventListener('click', (function(idx) { return function() { goTo(idx); }; })(i));
+    dotsContainer.appendChild(dot);
+  }
+  function renderMermaid() {
+    if (typeof mermaid === 'undefined') return;
+    var active = slides[current];
+    var diagrams = active.querySelectorAll('.mermaid');
+    if (diagrams.length) {
+      try { mermaid.run({ nodes: Array.from(diagrams) }); } catch(e) {}
+    }
+  }
+  function goTo(index) {
+    if (index < 0) index = total - 1;
+    if (index >= total) index = 0;
+    slides.forEach(function(s, i) { s.classList.toggle('active', i === index); });
+    current = index;
+    document.querySelectorAll('.hub-dot').forEach(function(d, i) {
+      d.classList.toggle('active', i === index);
+    });
+    slideCounter.textContent = (index + 1) + ' / ' + total;
+    progressBar.style.width = ((index + 1) / total * 100) + '%';
+    setTimeout(renderMermaid, 80);
+  }
+  document.addEventListener('keydown', function(e) {
+    var onSlide4 = function() {
+      var a = document.querySelector('.slide.active');
+      return a && parseInt(a.dataset.index) === 4;
+    };
+    if (onSlide4() && (e.key.startsWith('Arrow') || e.key === ' ')) return; // handled by UC script
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); goTo(current + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); goTo(current - 1); }
+    else if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+    else if (e.key === 'End') { e.preventDefault(); goTo(total - 1); }
+    else if (e.key === 'f' || e.key === 'F') { toggleFullscreen(); }
+    else if (e.key === 'Escape') {
+      var modal = document.getElementById('zoomModal');
+      if (modal.classList.contains('active')) modal.classList.remove('active');
+      modal.style.display = 'none';
+    }
+  });
+  document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(function(){}); }
+    else { document.exitFullscreen().catch(function(){}); }
+  }
+  var touchStartX = 0;
+  document.addEventListener('touchstart', function(e) { touchStartX = e.changedTouches[0].screenX; });
+  document.addEventListener('touchend', function(e) {
+    var diff = touchStartX - e.changedTouches[0].screenX;
+    if (Math.abs(diff) > 50) { if (diff > 0) goTo(current + 1); else goTo(current - 1); }
+  });
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.hub') || e.target.closest('.modal-overlay') || e.target.closest('.diagram-wrap') || e.target.closest('.modal-content')) return;
+    if (e.target.closest('a') || e.target.closest('button')) return;
+    var active = document.querySelector('.slide.active');
+    if (active && parseInt(active.dataset.index) === 4) {
+      // Advance UC sub-slide
+      if (typeof ucIndex !== 'undefined' && typeof renderUC !== 'undefined') {
+        var next = ucIndex < 15 ? ucIndex + 1 : 0;
+        renderUC(next);
+      }
+    } else {
+      goTo(current + 1);
+    }
+  });
+  window.zoomDiagram = function(el) {
+    var modal = document.getElementById('zoomModal');
+    var body = document.getElementById('zoomBody');
+    var clone = el.cloneNode(true);
+    clone.style.cursor = 'default';
+    clone.className = clone.className.replace('cursor-zoom-in', '');
+    body.innerHTML = '';
+    body.appendChild(clone);
+    modal.style.display = 'flex';
+    modal.classList.add('active');
+    try { mermaid.run({ nodes: Array.from(clone.querySelectorAll('.mermaid')) }); } catch(e) {}
+  };
+  document.getElementById('zoomModal').addEventListener('click', function(e) {
+    if (e.target === this) { this.classList.remove('active'); this.style.display = 'none'; }
+  });
+  document.getElementById('zoomClose').addEventListener('click', function() {
+    var modal = document.getElementById('zoomModal');
+    modal.classList.remove('active');
+    modal.style.display = 'none';
+  });
+  goTo(0);
+})();
+</script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 {
   "name": "Codec-Maipu",
-  "version": "0.1.0",
-  "lenguaje": "typescript",
+  "version": "0.2.0",
+  "language": "typescript",
   "strictMode": true,
   "stack": {
     "base": [
@@ -11,8 +11,23 @@
       "tailwind"
     ],
     "ui": "shadcn",
-    "extensions": [],
-    "domain": "general"
+    "extensions": [
+      "supabase",
+      "@supabase/supabase-js",
+      "@supabase/ssr"
+    ],
+    "domain": "parking"
+  },
+  "scopes": [
+    "core",
+    "parking",
+    "incidents",
+    "analytics"
+  ],
+  "platform": "pwa",
+  "deploy": {
+    "candidates": ["vercel", "google-cloud-run"],
+    "decision": "pending"
   },
   "mcp": {
     "servers": {
