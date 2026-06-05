@@ -1,6 +1,6 @@
 // @kind(document)
 // @contract(in: investigación OPL + requisitos -> out: especificaciones técnicas)
-// @limit(stack: React + Supabase + PWA)
+// @limit(stack: React + Supabase + Vercel + Firebase + Tailwind + Vite)
 // @scope(core, parking)
 
 # Especificaciones Técnicas — Codec-Maipu
@@ -201,7 +201,18 @@ export function useRealtime<T>(
 }
 ```
 
-### 2.5 Rate Limiting y Pool de Conexiones
+### 2.5 Stack Definitivo
+
+| Tecnología | Rol |
+|-----------|-----|
+| **Supabase** | Backend principal: PostgreSQL, Auth, Storage, Realtime |
+| **Vercel** | Hosting PWA + Serverless Functions |
+| **Firebase** | Notificaciones Push (FCM) |
+| **React 19** | UI |
+| **Tailwind v4** | Estilos |
+| **Vite** | Build tool |
+
+### 2.6 Rate Limiting y Pool de Conexiones
 - Una sola instancia de `SupabaseClient` (singleton)
 - Las queries se hacen mediante `rpc()` a funciones PostgreSQL, no queries raw desde el cliente
 - Evitar subscripciones Realtime innecesarias: suscribir solo las vistas que lo requieren (dashboard ocupación)
@@ -310,7 +321,7 @@ $$;
 ```sql
 -- @kind(function)
 -- @contract(in: codigo_tarjeta -> out: datos de verificación)
--- @limit(QR one-time: solo si tarjeta activa)
+-- @limit(solo asignaciones activas, escaneo múltiple permitido)
 
 CREATE OR REPLACE FUNCTION verificar_espacio(
   p_codigo_tarjeta text
@@ -387,7 +398,7 @@ BEGIN
   -- Liberar espacio
   UPDATE espacios SET estado = 'libre' WHERE id = v_espacio_id;
 
-  -- Desactivar tarjeta (QR one-time)
+  -- Liberar tarjeta (vuelve al pool para reasignación)
   UPDATE tarjetas SET activa = false, espacio_id = NULL WHERE id = v_tarjeta_id;
 
   RETURN jsonb_build_object(
@@ -464,6 +475,45 @@ EXECUTE FUNCTION fn_notificar_infraccion();
 ```
 
 ---
+
+## 3.6 QR Digital + Tarjeta Física
+
+### Estrategia Dual
+
+| Método | Cuándo se usa | Código QR |
+|--------|--------------|-----------|
+| **QR Digital** | Conductor con reserva previa | Generado en la app al asignar espacio. Se muestra en pantalla. |
+| **Tarjeta Física** | Conductor sin reserva (llega y solicita) | Tarjeta física con QR impreso, entregada por digitador. |
+
+### Reglas
+- El QR **no es de un solo uso**: el guardia puede escanearlo múltiples veces durante la vigencia de la asignación
+- Cada nueva reserva genera un **nuevo QR digital** distinto
+- La tarjeta física se reutiliza: al liberar el espacio, la tarjeta vuelve al pool y su QR se reactiva para otra asignación
+- El guardia almacena localmente (localStorage/IndexedDB) el historial de verificaciones del día para consulta offline
+
+### Tabla `verificaciones` (local + sync)
+
+```sql
+CREATE TABLE verificaciones (
+  id uuid PK DEFAULT gen_random_uuid(),
+  asignacion_id uuid FK → asignaciones,
+  guardia_id uuid FK → usuarios,
+  resultado text CHECK (resultado IN ('ok', 'infraccion')),
+  patente_observada text,
+  created_at timestamptz DEFAULT NOW()
+);
+
+-- Sincronización: el guardia puede crear verificaciones offline
+-- que se sincronizan cuando recupera conexión
+```
+
+### Cache Local del Guardia
+```typescript
+// src/hooks/useVerificacionesOffline.ts
+// @compose(localStorage)
+// Guarda verificaciones en localStorage mientras offline
+// Sincroniza con Supabase cuando vuelve la conexión
+```
 
 ## 4. Notificaciones Push (Firebase Cloud Messaging)
 
@@ -695,6 +745,20 @@ export function UpdatePassword() {
 | Blanco secundario | Texto secundario | `#B0B0B0` |
 | Amarillo suave | Badges, alertas suaves | `#FFF3D6` |
 
+### 6.1b Colores de Estado del Mapa
+
+| Estado | Color | Hex | Indicador |
+|--------|-------|-----|-----------|
+| Libre | Verde | `#22C55E` | Relleno verde sólido |
+| Ocupado | Rojo | `#EF4444` | Relleno rojo sólido |
+| Reservado | Naranja | `#F97316` | Relleno naranja sólido |
+| Mantenimiento | Amarillo | `#EAB308` | Relleno amarillo + triángulo ⚠ con exclamación |
+| Discapacitados | Azul | `#3B82F6` | Relleno azul + símbolo ♿ (silla de ruedas SVG) |
+
+Los slots de discapacitados se marcan con un SVG de silla de ruedas centrado en el rectángulo.
+
+Los slots de mantenimiento muestran un tooltip con el motivo (extraído del ticket asociado).
+
 ### 6.2 Layout General
 
 ```
@@ -838,9 +902,14 @@ Fondo: negro #1A1A1A
 │  │ Libres│ │ Ocup.│    │
 │  └──────┘ └──────┘    │
 │  ┌──────┐ ┌──────┐    │
-│  │ 🟡   │ │ ⚠️   │    │
+│  │ 🟠   │ │ ⚠️   │    │
 │  │ 3    │ │ 2    │    │
 │  │ Reserv│ │ Infr.│    │
+│  └──────┘ └──────┘    │
+│  ┌──────┐ ┌──────┐    │
+│  │ 🟡   │ │ 🔵   │    │
+│  │ 1    │ │ 5    │    │
+│  │ Mant. │ │ Disc.│    │
 │  └──────┘ └──────┘    │
 │                        │
 │  ┌──────────────────┐  │
@@ -852,7 +921,95 @@ Fondo: negro #1A1A1A
 │  └──────────────────┘  │
 │                        │
 ├────────────────────────┤
-│ 🏠  📷  📋  👤        │
+│ 🏠  🗺️  📋  👤        │ ← Home / Mapa / Lista / Perfil
+└────────────────────────┘
+```
+
+#### Vista Mapa (por defecto)
+```
+┌────────────────────────┐
+│ 🗺️  Mapa          👤   │ ← TopBar amarillo
+├────────────────────────┤
+│                        │
+│ ┌────────────────────┐ │
+│ │ 🟢 🟢 🔴 🟢 🟠   │ │ ← grilla sectores
+│ │ 🔴 🟡 🟢 🔵 🔴   │ │    colores por estado
+│ │ 🟢 🔴 🔴 🟢 🟠   │ │
+│ │ 🟢 🔵 🔴 🔴 🟢   │ │
+│ └────────────────────┘ │
+│                        │
+│ Leyenda:               │
+│ 🟢 Libre  🔴 Ocupado   │
+│ 🟠 Reserv ⚠️ Manten.   │
+│ 🔵 Discapacitados      │
+│                        │
+│ Tocá un slot para ver  │
+│ datos del ocupante     │
+├────────────────────────┤
+│ 🏠  🗺️  📋  👤        │
+└────────────────────────┘
+
+→ Al tocar un slot ocupado:
+┌────────────────────────┐
+│ 🅿️ A-15 (Ocupado)     │
+├────────────────────────┤
+│ Hora entrada: 08:30    │
+│ 👤 Juan Pérez          │
+│ RUT: 11.111.111-1      │
+│ 🚗 ABCD-12             │
+│ Suzuki Swift Gris      │
+│                        │
+│ ┌────────┐ ┌────────┐  │
+│ │  ✅ OK  │ │  ❌    │  │ ← verificar/infracción
+│ └────────┘ └────────┘  │
+│                        │
+│ ┌──────────────────┐   │
+│ │  📋 Ver detalles  │   │ ← ficha completa
+│ └──────────────────┘   │
+└────────────────────────┘
+```
+
+#### Vista Lista
+```
+┌────────────────────────┐
+│ 📋 Lista          👤   │ ← TopBar amarillo
+├────────────────────────┤
+│ [Filtros]              │
+│ ┌─ Zona: Todas ──────┐│
+│ │  Norte ▸  Sur ▸     ││ ← dropdown
+│ │  Oriente ▸ Poniente ││
+│ └────────────────────┘│
+│ ┌─ Estado: ──────────┐│
+│ │  ☑ Todos            ││ ← checkboxes
+│ │  ☐ Solo libres      ││
+│ │  ☐ Solo ocupados    ││
+│ └────────────────────┘│
+│ ┌─ Ordenar: ─────────┐│
+│ │  Más reciente ▸     ││ ← dropdown
+│ │  Más antiguo ▸      ││
+│ │  Por zona ▸         ││
+│ └────────────────────┘│
+│                        │
+│ Resultados: 45/110     │
+│                        │
+│ ┌──────────────────┐   │
+│ │ A-15 🟢 Libre     │   │ ← card con número + estado
+│ └──────────────────┘   │
+│ ┌──────────────────┐   │
+│ │ B-08 🔴 Ocupado   │   │
+│ │ 08:30 | J. Pérez  │   │ ← hora + nombre
+│ │ ABCD-12           │   │ ← patente
+│ └──────────────────┘   │
+│ ┌──────────────────┐   │
+│ │ C-03 🟠 Reservado │   │
+│ └──────────────────┘   │
+│ ┌──────────────────┐   │
+│ │ A-16 🟡 ⚠️ Manten.│   │
+│ │ Fuga de agua     │   │ ← motivo
+│ └──────────────────┘   │
+│                        │
+├────────────────────────┤
+│ 🏠  🗺️  📋  👤        │
 └────────────────────────┘
 ```
 
@@ -885,6 +1042,7 @@ Fondo: negro #1A1A1A
 │                        │
 │  Espacio: A-15         │ ← texto grande blanco
 │  Sector: Norte         │
+│  Hora entrada: 08:30   │
 │                        │
 │  ┌──────────────────┐  │
 │  │ 👤 Juan Pérez     │  │ ← card negro surface
@@ -900,7 +1058,7 @@ Fondo: negro #1A1A1A
 │  │  ✅ OK  │ │  ❌    ││ ← botones grandes
 │  │        │ │Infracc.││
 │  └────────┘ └────────┘│
-│  verde    amarillo/rojo│
+│  verde    naranja/rojo │
 │                        │
 └────────────────────────┘
 ```
@@ -972,20 +1130,21 @@ Fondo: negro #1A1A1A
 │ 🔔 Codec-Maipu | Seguridad          👤   │
 ├──────────┬───────────────────────────────┤
 │ 🖥️ Dashboard │ ┌─────────────────────────┐│
-│ 🅿️ Mapa   │ │  Mapa de Ocupación       ││
-│ ✅ Verif. │ │  ┌───┬───┬───┬───┬───┐  ││
-│ ⚠️ Infracc.│ │  │🟢│🔴│🟢│🔴│🔴│  ││ ← grilla sectores
+│ 🗺️ Mapa   │ │  Mapa de Ocupación       ││
+│ 📋 Lista  │ │  ┌───┬───┬───┬───┬───┐  ││
+│ ✅ Verif. │ │  │🟢│🔴│🟢│🔴│🔴│  ││ ← grilla sectores
+│ ⚠️ Infracc.│ │  ├───┼───┼───┼───┼───┤  ││
+│ 🔧 Tickets │ │  │🟢│🟢│🔴│🟢│🟠│  ││
 │ 📊 Report. │ │  ├───┼───┼───┼───┼───┤  ││
-│          │ │  │🟢│🟢│🔴│🟢│🟡│  ││
-│          │ │  ├───┼───┼───┼───┼───┤  ││
 │          │ │  │🔴│🔴│🟢│🟢│🔴│  ││
+│          │ │  │🟡⚠️│🔵│🟢│🟠│🔴│  ││
 │          │ │  └───┴───┴───┴───┴───┘  ││
 │          │ └─────────────────────────┘  │
 │          │                               │
-│          │  ┌────┐ ┌────┐ ┌────┐        │
-│          │  │73% │ │45  │ │ 2  │        │ ← KPIs
-│          │  │Ocup.│ │Lib.│ │Inf.│        │
-│          │  └────┘ └────┘ └────┘        │
+│          │  ┌────┐ ┌────┐ ┌────┐ ┌────┐ │
+│          │  │73% │ │45  │ │ 2  │ │ 1  │ │ ← KPIs
+│          │  │Ocup.│ │Lib.│ │Inf.│ │Mant.│ │
+│          │  └────┘ └────┘ └────┘ └────┘ │
 │          │                               │
 │          │  ⚠️ 2 infracciones pendientes │ ← alerta
 │          │  ┌─────────────────────────┐  │

@@ -1,18 +1,22 @@
 import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 
-type SlotStatus = 'free' | 'occupied' | 'reserved';
+type SlotStatus = 'free' | 'occupied' | 'reserved' | 'maintenance' | 'disabled';
 
 const labelStatus: Record<SlotStatus, string> = {
   free: 'Libre',
   occupied: 'Ocupado',
   reserved: 'Reservado',
+  maintenance: 'Mantenimiento',
+  disabled: 'Discapacitados',
 };
 
 const nextStatus: Record<SlotStatus, SlotStatus> = {
   free: 'occupied',
   occupied: 'reserved',
   reserved: 'free',
+  maintenance: 'maintenance',
+  disabled: 'disabled',
 };
 
 const W = 30;
@@ -30,13 +34,13 @@ interface LayoutBlock {
 }
 
 const layout: LayoutBlock[] = [
-  { type: 'row', prefix: 'A', x: 170, y: 40, count: 18, statuses: ['occupied','free','occupied','free','occupied','occupied','occupied','occupied','free','occupied','occupied','free','occupied','free','occupied','occupied','free','free'], angle: 0 },
-  { type: 'row', prefix: 'B', x: 250, y: 150, count: 12, statuses: ['free','occupied','free','occupied','occupied','free','occupied','occupied','free','free','occupied','free'], angle: 0 },
+  { type: 'row', prefix: 'A', x: 170, y: 40, count: 18, statuses: ['occupied','free','occupied','disabled','occupied','occupied','maintenance','occupied','free','occupied','occupied','free','occupied','free','occupied','occupied','free','free'], angle: 0 },
+  { type: 'row', prefix: 'B', x: 250, y: 150, count: 12, statuses: ['free','occupied','free','occupied','occupied','free','disabled','occupied','free','free','occupied','free'], angle: 0 },
   { type: 'row', prefix: 'C', x: 250, y: 255, count: 12, statuses: ['free','free','occupied','free','occupied','free','free','occupied','occupied','free','free','occupied'], angle: 0 },
-  { type: 'row', prefix: 'D', x: 320, y: 370, count: 10, statuses: ['free','free','free','free','free','occupied','occupied','reserved','reserved','free'], angle: 0 },
+  { type: 'row', prefix: 'D', x: 320, y: 370, count: 10, statuses: ['free','free','free','free','free','occupied','occupied','reserved','reserved','disabled'], angle: 0 },
   { type: 'row', prefix: 'E', x: 320, y: 435, count: 10, statuses: ['free','free','free','occupied','occupied','occupied','free','free','occupied','free'], angle: 0 },
-  { type: 'row', prefix: 'F', x: 300, y: 585, count: 10, statuses: ['free','occupied','free','occupied','occupied','free','free','occupied','free','free'], angle: 0 },
-  { type: 'column', prefix: 'L', x: 90, y: 170, count: 12, statuses: ['free','occupied','free','free','occupied','free','occupied','free','free','occupied','free','free'], angle: -12 },
+  { type: 'row', prefix: 'F', x: 300, y: 585, count: 10, statuses: ['free','occupied','free','occupied','occupied','free','free','maintenance','free','free'], angle: 0 },
+  { type: 'column', prefix: 'L', x: 90, y: 170, count: 12, statuses: ['free','occupied','free','free','disabled','free','occupied','free','free','occupied','free','free'], angle: -12 },
   { type: 'column', prefix: 'R1', x: 760, y: 140, count: 13, statuses: ['occupied','free','free','occupied','occupied','free','occupied','free','occupied','free','free','occupied','free'], angle: 0 },
   { type: 'column', prefix: 'R2', x: 815, y: 140, count: 13, statuses: ['free','free','occupied','free','occupied','occupied','free','free','free','occupied','free','occupied','free'], angle: 0 },
 ];
@@ -66,13 +70,17 @@ export default function Slide10() {
   const statusColors: StatusColorMap = {
     free: '#22c55e',
     occupied: '#ef4444',
-    reserved: '#facc15',
+    reserved: '#f97316',
+    maintenance: '#eab308',
+    disabled: '#3b82f6',
   };
 
   const stats = {
     free: Object.values(slots).filter(s => s === 'free').length,
     occupied: Object.values(slots).filter(s => s === 'occupied').length,
     reserved: Object.values(slots).filter(s => s === 'reserved').length,
+    maintenance: Object.values(slots).filter(s => s === 'maintenance').length,
+    disabled: Object.values(slots).filter(s => s === 'disabled').length,
   };
 
   return (
@@ -94,7 +102,7 @@ export default function Slide10() {
         </p>
       </motion.div>
 
-      <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3 text-[10px] sm:text-xs">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2 sm:mb-3 text-[10px] sm:text-xs">
         <span className="flex items-center gap-1">
           <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm" style={{ backgroundColor: statusColors.free }} />
           <span className="text-slate-300">Libre ({stats.free})</span>
@@ -106,6 +114,14 @@ export default function Slide10() {
         <span className="flex items-center gap-1">
           <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm" style={{ backgroundColor: statusColors.reserved }} />
           <span className="text-slate-300">Reservado ({stats.reserved})</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm" style={{ backgroundColor: statusColors.maintenance }} />
+          <span className="text-slate-300">Manten. ({stats.maintenance})</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm" style={{ backgroundColor: statusColors.disabled }} />
+          <span className="text-slate-300">Discap. ({stats.disabled})</span>
         </span>
         {selectedSlot && (
           <span className="text-slate-500 ml-2">
@@ -158,6 +174,15 @@ export default function Slide10() {
                       strokeWidth={selectedSlot === id ? 2.2 : 1.5}
                       className="transition-all duration-100"
                     />
+                    {status === 'maintenance' && (
+                      <>
+                        <polygon points={`${W/2},8 ${W/2-8},${H-8} ${W/2+8},${H-8}`} fill="#1a1a1a" />
+                        <text x={W/2} y={H-14} textAnchor="middle" fontSize={14} fontWeight="bold" fill="#eab308">!</text>
+                      </>
+                    )}
+                    {status === 'disabled' && (
+                      <text x={W/2} y={H-10} textAnchor="middle" fontSize={16} fill="white">♿</text>
+                    )}
                     <title>{`${id} - ${labelStatus[status]}`}</title>
                   </g>
                 );
