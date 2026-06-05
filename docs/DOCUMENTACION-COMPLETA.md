@@ -81,10 +81,10 @@ Duoc UC Sede Maipú es el campus más extenso y poblado de Duoc UC en Santiago/C
 
 | Capa | Tecnología | Versión | Costo |
 |------|-----------|---------|-------|
-| Frontend | React + Vite + Tailwind + shadcn | React 18+ | $0 |
+| Frontend | React + Vite + Tailwind + shadcn | React 19 | $0 |
 | Backend/DB | Supabase (PostgreSQL 15, Auth, Realtime, Storage) | Free Tier | $0 |
-| IA | Google AI Studio + Antigravity Tool | Free Tier | $0 |
-| Hosting PWA | Vercel / Google Cloud Run | Hobby/Free | $0 |
+| Notificaciones | Firebase Cloud Messaging (FCM) | Free Tier | $0 |
+| Hosting PWA | Vercel | Hobby/Free | $0 |
 | CI/CD | GitHub Actions | Free | $0 |
 | Dev DB | Supabase CLI + Docker (local) | - | $0 |
 
@@ -110,9 +110,11 @@ Duoc UC Sede Maipú es el campus más extenso y poblado de Duoc UC en Santiago/C
 - **No hay backend intermedio**: frontend consulta Supabase directo
 - Cada tabla tiene policies RLS por rol, auditables en SQL
 
-#### ADR-005: QR de un solo uso
-- Cada tarjeta tiene UUID único. Al usar: `UPDATE tarjetas SET activa = false`
-- Segundo escaneo: rechazado por `validar_qr()` atómico
+#### ADR-005: QR Digital + Tarjeta Física
+- **QR Digital**: Se genera en la app al asignar espacio. Distinto por cada reserva. El conductor lo muestra desde su pantalla.
+- **Tarjeta Física**: Para conductores sin reserva que llegan y solicitan espacio. Tiene QR impreso, se reutiliza tras liberación.
+- **No es de un solo uso**: el guardia puede escanearlo múltiples veces durante la vigencia de la asignación
+- **Cache local**: el guardia almacena verificaciones en localStorage mientras offline, sincroniza al recuperar conexión
 
 #### ADR-006: Offline read-only
 - Service worker con `NetworkFirst` para datos, `CacheFirst` para assets
@@ -414,7 +416,7 @@ sequenceDiagram
 | HU-11 | Ticket | **Como** Conductor, **quiero** abrir un ticket de comunicación **para** recibir respuesta de la guardia | **Dado** que tengo una consulta, **Cuando** abro un ticket y escribo, **Entonces** el guardia lo recibe y puede responder |
 | HU-12 | Mapa SVG | **Como** Guardia, **quiero** ver el mapa SVG del estacionamiento **para** identificar rápidamente espacios libres y ocupados | **Dado** el mapa renderizado, **Cuando** paso el mouse sobre un espacio, **Entonces** veo tooltip con datos del ocupante |
 | HU-13 | Rotación | **Como** Jefe SG, **quiero** ver métricas de rotación **para** analizar uso por hora/día/mes/año | **Dado** el dashboard de métricas, **Cuando** selecciono un rango, **Entonces** veo estadía promedio, horas pico y ocupación |
-| HU-14 | QR único | **Como** Guardia, **quiero** que cada QR sea válido una sola vez **para** evitar reuso fraudulento | **Dado** un QR ya escaneado, **Cuando** se intenta usar de nuevo, **Entonces** el sistema lo rechaza con mensaje "QR ya utilizado" |
+| HU-14 | QR multipropósito | **Como** Guardia, **quiero** escanear un QR múltiples veces durante una asignación **para** verificar datos sin depender de conexión | **Dado** un QR escaneado offline, **Cuando** hay conexión, **Entonces** los datos se sincronizan y la verificación queda registrada |
 
 ---
 
@@ -726,7 +728,7 @@ erDiagram
         uuid id PK
         text codigo UK
         uuid espacio_id FK
-        boolean activa "one-time: false tras usar"
+        boolean activa "se desactiva al liberar espacio, reutilizable en nueva asignación"
     }
 
     asignaciones {
@@ -778,7 +780,7 @@ erDiagram
 | `asignar_espacio(p_rut, p_patente)` | Busca espacio libre, crea asignación con tarjeta, marca espacio ocupado | `{sector, numero, codigo_tarjeta}` |
 | `verificar_espacio(p_codigo_tarjeta)` | Retorna datos conductor, vehículo y espacio de asignación activa | `{conductor, patente, espacio, vehiculo}` |
 | `liberar_espacio(p_codigo_tarjeta)` | Marca salida, libera espacio, reactiva tarjeta | `{exito, mensaje}` |
-| `validar_qr(p_codigo)` | Verifica QR no usado + lo marca como usado (operación atómica) | `{valido, espacio_id}` |
+| `validar_qr(p_codigo)` | Retorna datos del espacio asociado a la tarjeta si está activa | `{valido, espacio_id, conductor, patente}` |
 | `abrir_ticket(p_usuario_id, p_tipo, p_mensaje)` | Crea ticket + primer mensaje, asigna guardia disponible | `{ticket_id, estado}` |
 
 ### 9.3 Vistas Materializadas
@@ -804,8 +806,8 @@ CREATE POLICY conductor_self ON asignaciones
 CREATE POLICY guardia_verificar ON asignaciones
   FOR UPDATE USING (rol() = 'guardia' AND estado = 'activa');
 
--- Ejemplo: QR one-time (update solo si activa = true)
-CREATE POLICY qr_one_time ON tarjetas
+-- Ejemplo: tarjeta verificable solo si está activa
+CREATE POLICY tarjeta_activa ON tarjetas
   FOR UPDATE USING (activa = true);
 ```
 
@@ -909,26 +911,37 @@ Conductor necesita asistencia
 ```
 
 **Colores por estado**:
-| Estado | Color | Hex |
-|--------|-------|-----|
-| Libre | Verde | `#00A650` |
-| Ocupado | Azul | `#004481` |
-| Reservado | Naranjo | `#F39200` |
-| Mantenimiento | Rojo | `#E30613` |
-| Discapacitado | Púrpura | `#9C27B0` |
-| Mi espacio (activo) | Borde dorado | `#FFD700` |
+| Estado | Color | Hex | Indicador |
+|--------|-------|-----|-----------|
+| Libre | Verde | `#22C55E` | Relleno verde sólido |
+| Ocupado | Rojo | `#EF4444` | Relleno rojo sólido |
+| Reservado | Naranja | `#F97316` | Relleno naranja sólido |
+| Mantenimiento | Amarillo | `#EAB308` | Relleno amarillo + triángulo ⚠ con exclamación |
+| Discapacitados | Azul | `#3B82F6` | Relleno azul + símbolo ♿ (silla de ruedas SVG) |
+| Mi espacio (activo) | — | — | Borde dorado `#FFD700` |
 
-### 11.2 QR de Un Solo Uso
+### 11.2 QR Digital + Tarjeta Física (Dual Strategy)
 
-**Ciclo de vida**:
-1. Admin crea tarjeta: `INSERT tarjetas (codigo = uuid, activa = true)`
-2. Digitador asigna espacio: QR se genera en PWA del conductor + localStorage
-3. Guardia escanea: `validar_qr(codigo)` → UPDATE `activa = false` (atómico)
-4. Segundo escaneo: rechazado ("QR ya utilizado")
+**QR Digital** (con reserva previa):
+1. Digitador asigna espacio al conductor
+2. Sistema genera un QR digital único vinculado a la asignación
+3. Conductor lo ve en su app y lo muestra al guardia
+4. Cada nueva reserva genera un QR digital distinto
+
+**Tarjeta Física** (sin reserva, llega y solicita):
+1. Digitador asigna espacio + entrega tarjeta física con QR impreso
+2. Conductor cuelga la tarjeta del retrovisor
+3. Guardia escanea el QR para verificar
+4. Al liberar, la tarjeta vuelve al pool y se reusa
+
+**Ambos casos**:
+- El guardia puede escanear **múltiples veces** el mismo QR durante la vigencia de la asignación
+- Las verificaciones se guardan en `localStorage` del guardia para consulta offline
+- Al recuperar conexión, se sincronizan con Supabase
 
 **Contenido del QR**:
 ```json
-{ "codigo": "uuid-de-la-tarjeta", "espacio": "A-15", "expira": "ISO-timestamp" }
+{ "codigo": "uuid-de-la-asignacion", "espacio": "A-15", "tipo": "digital|fisica" }
 ```
 
 ### 11.3 Estrategia Offline (Read-Only)
@@ -1098,29 +1111,26 @@ supabase db reset  # Aplica migraciones + seed
 
 ## 14. Theme Duoc UC
 
-### Paleta de Colores
+### Paleta de Colores — Amarillo + Negro + Blanco
 
 | Token | Hex | Uso |
 |-------|-----|-----|
-| `duoc-primary` | `#004481` | Navbar, botones, headers |
-| `duoc-primary-light` | `#0066B4` | Hover, active |
-| `duoc-secondary` | `#00A650` | Éxito, espacios libres |
-| `duoc-accent` | `#F39200` | Alertas, reservados |
-| `duoc-danger` | `#E30613` | Infracciones, bloqueados |
-| `duoc-bg` | `#F5F5F5` | Fondo general |
-| `duoc-surface` | `#FFFFFF` | Tarjetas, paneles |
-| `duoc-text` | `#1A1A1A` | Texto principal |
+| `amarillo-primary` | `#F5A623` | Headers, botones principales, acentos |
+| `amarillo-hover` | `#D4891A` | Hover states |
+| `negro-fondo` | `#1A1A1A` | Fondo general (dark mode) |
+| `negro-surface` | `#2D2D2D` | Tarjetas, paneles |
+| `blanco-texto` | `#FFFFFF` | Texto principal |
+| `blanco-secundario` | `#B0B0B0` | Texto secundario |
 
-### Significado Semántico para Parking
+### Significado Semántico para Parking (Mapa SVG)
 
-| Estado | Color | Espacio |
-|--------|-------|---------|
-| Libre | `#00A650` | Verde |
-| Ocupado | `#004481` | Azul |
-| Reservado | `#F39200` | Naranjo |
-| Bloqueado/Mantenimiento | `#E30613` | Rojo |
-| En disputa | `#E30613` + parpadeo | Rojo |
-| Discapacitado | `#9C27B0` | Púrpura |
+| Estado | Color | Hex | Indicador |
+|--------|-------|-----|-----------|
+| Libre | Verde | `#22C55E` | Relleno verde sólido |
+| Ocupado | Rojo | `#EF4444` | Relleno rojo sólido |
+| Reservado | Naranja | `#F97316` | Relleno naranja sólido |
+| Mantenimiento | Amarillo | `#EAB308` | Relleno amarillo + triángulo ⚠ con exclamación |
+| Discapacitados | Azul | `#3B82F6` | Relleno azul + símbolo ♿ (silla de ruedas SVG) |
 
 ### Configuración Tailwind
 
@@ -1148,7 +1158,7 @@ module.exports = {
 | ID | Requisito |
 |----|-----------|
 | REQ-01 | Renderizar 110 espacios como rectángulos SVG numerados por sector |
-| REQ-02 | Código de colores por estado: libre=verde, ocupado=azul, reservado=naranjo, mantenimiento=rojo |
+| REQ-02 | Código de colores por estado: libre=verde, ocupado=rojo, reservado=naranja, mantenimiento=amarillo+⚠, discapacitado=azul+♿ |
 | REQ-03 | Marcación entrada (verde) y salida (roja) para orientación |
 | REQ-04 | Tooltip al hover: sector + número + estado + patente si ocupado |
 | REQ-05 | Destacar espacio del conductor con borde dorado `#FFD700` |
@@ -1182,7 +1192,860 @@ module.exports = {
 
 ---
 
-## 16. Requisitos No Funcionales
+## 16. Estructura de Archivos
+
+> Esta sección define el organigrama exacto de carpetas y archivos que la IA debe generar para implementar el sistema. Sirve como índice de construcción.
+
+```
+src/
+├── main.tsx                          # Entry point: render <App />
+├── App.tsx                           # @compose(Router, AppShell)
+├── index.css                         # Tailwind v4 layers + theme tokens
+├── vite-env.d.ts
+│
+├── lib/
+│   ├── supabase.ts                   # @scope(core) Cliente Supabase singleton
+│   ├── supabase-server.ts            # @scope(core) Cliente SSR (ServerComponent)
+│   ├── utils.ts                      # cn(), formatRut(), formatPatente(), formatearFecha()
+│   └── constants.ts                  # ROLES, ESTADOS_ESPACIO, TIPOS_TICKET, SECTORES
+│
+├── types/
+│   ├── database.ts                   # Tipos auto-generados de Supabase (pg-to-ts)
+│   ├── app.ts                        # App-specific types (SlotStatus, ViewRole, etc.)
+│   └── index.ts                      # Re-exportaciones
+│
+├── hooks/
+│   ├── useAuth.ts                    # @scope(core) useSession, useSignIn, useSignOut, useUser
+│   ├── useOffline.ts                 # @scope(core) useOnlineStatus, useSyncQueue
+│   ├── useRealtimeParking.ts         # @scope(parking) subscribe a postgres_changes espacios
+│   ├── useAsignarEspacio.ts          # @scope(parking) mutation RPC asignar_espacio
+│   ├── useLiberarEspacio.ts          # @scope(parking) mutation RPC liberar_espacio
+│   ├── useVerificarQR.ts             # @scope(parking) RPC verificar_espacio + cache offline
+│   ├── useInfracciones.ts            # @scope(incidents) CRUD infracciones
+│   ├── useTickets.ts                 # @scope(incidents) CRUD tickets + mensajes
+│   ├── useDashboard.ts              # @scope(analytics) KPIs y vistas materializadas
+│   └── useEspacios.ts               # @scope(parking) query/cache espacios con filtros
+│
+├── services/
+│   ├── api.ts                        # @scope(core) Wrapper tipado sobre supabase.rpc()
+│   ├── offline.ts                    # @scope(core) IndexedDB queue para mutaciones offline
+│   ├── notifications.ts             # @scope(core) Firebase FCM: requestPermission, onMessage
+│   └── cache.ts                      # @scope(core) Cache local con TTL (5min, 30min, 60min)
+│
+├── components/
+│   ├── layout/
+│   │   ├── AppShell.tsx              # @compose(Sidebar, Topbar, Outlet, OfflineBadge)
+│   │   ├── Sidebar.tsx               # Nav items por rol (useAuth + useLocation)
+│   │   ├── Topbar.tsx                # Avatar + nombre rol + logout
+│   │   └── OfflineBadge.tsx          # isOnline ? null : <Badge variant="destructive">Sin conexión</Badge>
+│   ├── auth/
+│   │   ├── LoginForm.tsx             # @compose(Input, Button) — RUT + contraseña
+│   │   └── ProtectedRoute.tsx        # role check + redirect
+│   ├── parking/
+│   │   ├── ParkingMap.tsx            # @compose(SpaceSlot × 110) — SVG interactivo
+│   │   ├── SpaceSlot.tsx             # props: { id, estado, onClick, onHover } → rect + tooltip
+│   │   ├── ParkingList.tsx           # @compose(Input, Select, Badge) — tabla con filtros
+│   │   ├── AssignmentForm.tsx        # @compose(Input, Button, QRDisplay) — digitador
+│   │   ├── ReleaseConfirmation.tsx   # @compose(Dialog, Button) — confirmar liberación
+│   │   └── EspacioDetail.tsx        # Modal con datos del ocupante + tiempo
+│   ├── qr/
+│   │   ├── QRScanner.tsx             # @scope(parking) cámara + html5-qrcode
+│   │   ├── QRDisplay.tsx             # @scope(parking) <canvas> con QR de tarjeta digital
+│   │   └── VerificationResult.tsx    # @compose(Badge, Card) — éxito/error + datos conductor
+│   ├── tickets/
+│   │   ├── TicketList.tsx            # @scope(incidents) lista con filtros por estado
+│   │   ├── TicketDetail.tsx          # @scope(incidents) mensajes + responder
+│   │   └── TicketForm.tsx            # @scope(incidents) nuevo ticket: tipo + mensaje
+│   ├── dashboard/
+│   │   ├── KPIGrid.tsx              # @scope(analytics) grid 2×3 de KPI cards
+│   │   ├── OccupancyChart.tsx        # @scope(analytics) gráfico Recharts hora/día/mes
+│   │   ├── RotationChart.tsx         # @scope(analytics) horas pico + estadía promedio
+│   │   └── AlertsPanel.tsx           # @scope(analytics) alertas activas + históricas
+│   ├── ui/                           # shadcn/ui components (generados por CLI)
+│   │   ├── avatar.tsx
+│   │   ├── badge.tsx
+│   │   ├── button.tsx
+│   │   ├── card.tsx
+│   │   ├── dialog.tsx
+│   │   ├── input.tsx
+│   │   └── select.tsx
+│   └── Mermaid.tsx                   # Renderizador de diagramas (presentación legacy)
+│
+├── pages/
+│   ├── LoginPage.tsx                 # @compose(LoginForm) — ruta: /login
+│   ├── RegisterPage.tsx              # @compose(RegisterForm) — ruta: /register
+│   ├── DashboardPage.tsx            # @compose(KPIGrid, OccupancyChart, AlertsPanel) — ruta: /
+│   ├── ParkingPage.tsx              # @compose(ParkingMap, ParkingList) — ruta: /parking
+│   ├── TicketsPage.tsx              # @compose(TicketList) — ruta: /tickets
+│   ├── TicketDetailPage.tsx         # @compose(TicketDetail) — ruta: /tickets/:id
+│   ├── ProfilePage.tsx              # @compose(ProfileForm, QRDisplay) — ruta: /profile
+│   ├── QRScannerPage.tsx            # @compose(QRScanner, VerificationResult) — ruta: /scanner
+│   └── NotFoundPage.tsx             # 404
+│
+├── router/
+│   └── index.tsx                     # createBrowserRouter con rutas + ProtectedRoute
+│
+└── __tests__/
+    ├── hooks/
+    │   ├── useAuth.test.ts
+    │   ├── useAsignarEspacio.test.ts
+    │   └── useVerificarQR.test.ts
+    └── components/
+        ├── ParkingMap.test.tsx
+        └── QRScanner.test.tsx
+```
+
+### 16.1 Convenciones de Archivos
+
+| Regla | Valor |
+|-------|-------|
+| Nombres | PascalCase para componentes, camelCase para hooks/utils |
+| Exports | Named exports siempre (no default) |
+| Props | `type` sobre `interface` |
+| Estilos | Tailwind utility classes, no CSS modules |
+| Tests | `*.test.ts` o `*.test.tsx` junto al archivo |
+| Anotaciones | `@kind`, `@contract`, `@scope` en todo archivo nuevo |
+
+---
+
+## 17. Árbol de Componentes
+
+> Especificación completa de composición (`@compose`) con props y tipo de cada componente. La IA debe poder leer esta sección y generar el árbol exacto.
+
+### 17.1 Árbol de Composición (Root)
+
+```
+App.tsx
+  @compose(RouterProvider)
+  └── router/index.tsx
+        @compose(ProtectedRoute, AppShell)
+        ├── ProtectedRoute            props: { allowedRoles: Role[] }
+        │   └── AppShell             props: { children: ReactNode }
+        │       ├── Sidebar           props: { role: Role, pathname: string }
+        │       ├── Topbar            props: { user: User, onLogout: () => void }
+        │       ├── OfflineBadge      (no props — lee isOnline de useOffline)
+        │       └── <Outlet />        (React Router)
+        │
+        ├── pages/DashboardPage       ruta: /   roles: [jefe_sg, directivo, jefe_sd]
+        │   @compose(KPIGrid, OccupancyChart, RotationChart, AlertsPanel)
+        │   ├── KPIGrid               props: { kpis: KPI[] }
+        │   │   └── KpiCard           props: { label: string, value: number, icon: LucideIcon, delta?: number }
+        │   ├── OccupancyChart        props: { data: OccupancyPoint[], period: 'day'|'month'|'year' }
+        │   ├── RotationChart         props: { data: HourlyPoint[] }
+        │   └── AlertsPanel           props: { alerts: Alert[] }
+        │
+        ├── pages/ParkingPage         ruta: /parking   roles: [guardia, digitador, jefe_seguridad]
+        │   @compose(ParkingMap, ParkingList, AssignmentForm)
+        │   ├── ParkingMap            props: { espacios: Espacio[], onSelect: (id) => void }
+        │   │   └── SpaceSlot         props: { id: string, estado: SlotStatus, sector: string, numero: number, onClick: () => void }
+        │   ├── ParkingList           props: { espacios: Espacio[], filtros: FiltrosParking }
+        │   │   └── ParkingRow        props: { espacio: Espacio, ocupante?: Ocupante }
+        │   └── AssignmentForm        props: { onAssign: (rut: string, patente: string) => void, isLoading: boolean }
+        │       ├── QRDisplay          props: { codigo: string }
+        │       └── ReleaseConfirmation props: { espacio: Espacio, onConfirm: () => void, onCancel: () => void }
+        │
+        ├── pages/TicketsPage         ruta: /tickets   roles: [conductor, guardia, jefe_seguridad]
+        │   @compose(TicketList)
+        │   └── TicketList            props: { tickets: Ticket[], onSelect: (id) => void }
+        │       └── TicketRow          props: { ticket: Ticket }
+        │
+        ├── pages/TicketDetailPage    ruta: /tickets/:id
+        │   @compose(TicketDetail, TicketForm)
+        │   ├── TicketDetail          props: { ticket: Ticket, mensajes: Mensaje[] }
+        │   │   └── MensajeBubble     props: { mensaje: Mensaje, esPropio: boolean }
+        │   └── TicketForm            props: { onSubmit: (msg: string) => void }
+        │
+        ├── pages/ProfilePage         ruta: /profile   roles: [conductor]
+        │   @compose(QRDisplay)
+        │   └── QRDisplay              props: { codigo: string }
+        │
+        ├── pages/QRScannerPage       ruta: /scanner   roles: [guardia]
+        │   @compose(QRScanner, VerificationResult)
+        │   ├── QRScanner              props: { onScan: (codigo: string) => void }
+        │   └── VerificationResult     props: { resultado: 'success'|'error' | 'offline', data?: VerificacionData }
+        │
+        ├── pages/LoginPage           ruta: /login   roles: [public]
+        │   @compose(LoginForm)
+        │   └── LoginForm             props: { onLogin: (rut: string, password: string) => void, error?: string }
+        │
+        └── pages/RegisterPage        ruta: /register   roles: [public]
+            @compose(RegisterForm)
+            └── RegisterForm          props: { onRegister: (data: RegisterData) => void }
+```
+
+### 17.2 Props Compartidas (tipos)
+
+```typescript
+// @kind(config)
+// @scope(core)
+
+type Role = 'conductor' | 'guardia' | 'digitador' | 'jefe_seguridad' | 'jefe_sg' | 'jefe_sd' | 'directivo'
+
+type SlotStatus = 'libre' | 'ocupado' | 'reservado' | 'mantenimiento' | 'discapacitado'
+
+type Espacio = {
+  id: string
+  sector: string
+  numero: number
+  tipo: 'discapacitado' | 'visita' | 'general'
+  estado: SlotStatus
+  sede: string
+}
+
+type Ocupante = {
+  nombre: string
+  rut: string
+  patente: string
+  marca: string
+  modelo: string
+  color: string
+  entrada: string
+}
+
+type Ticket = {
+  id: string
+  tipo: 'consulta' | 'reporte' | 'problema'
+  estado: 'abierto' | 'en_curso' | 'resuelto' | 'cerrado'
+  created_at: string
+  usuario_nombre: string
+}
+
+type KPI = {
+  label: string
+  value: number
+  icon: string
+  delta?: number
+  unidad: string
+}
+```
+
+---
+
+## 18. RPC Functions — Especificación Completa
+
+> Cada función incluye su firma exacta, lógica PL/pgSQL, y manejo de errores. La IA debe poder copiar esto directamente a una migración de Supabase.
+
+### 18.1 `asignar_espacio`
+
+```sql
+-- @kind(function)
+-- @scope(parking)
+-- @contract(in: rut + patente -> out: espacio asignado + tarjeta)
+CREATE OR REPLACE FUNCTION public.asignar_espacio(
+    p_rut text,
+    p_patente text
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_usuario_id uuid;
+    v_vehiculo_id uuid;
+    v_espacio_id uuid;
+    v_tarjeta_id uuid;
+    v_codigo text;
+    v_sector text;
+    v_numero int;
+    v_asignacion_id uuid;
+BEGIN
+    -- 1. Validar que conductor no tenga asignación activa
+    IF EXISTS (
+        SELECT 1 FROM asignaciones a
+        JOIN usuarios u ON u.id = a.usuario_id
+        WHERE u.rut = p_rut AND a.estado = 'activa'
+    ) THEN
+        RETURN jsonb_build_object('exito', false, 'error', 'El conductor ya tiene una asignación activa');
+    END IF;
+
+    -- 2. Buscar o validar usuario
+    SELECT id INTO v_usuario_id FROM usuarios WHERE rut = p_rut AND activo = true;
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('exito', false, 'error', 'Usuario no encontrado o inactivo');
+    END IF;
+
+    -- 3. Buscar o validar vehículo
+    SELECT id INTO v_vehiculo_id FROM vehiculos WHERE patente = p_patente AND activo = true;
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('exito', false, 'error', 'Vehículo no registrado para este conductor');
+    END IF;
+
+    -- 4. Asignar espacio libre (con SKIP LOCKED para concurrencia)
+    SELECT e.id, e.sector, e.numero INTO v_espacio_id, v_sector, v_numero
+    FROM espacios e
+    WHERE e.estado = 'libre'
+    ORDER BY e.sector, e.numero
+    LIMIT 1
+    FOR UPDATE SKIP LOCKED;
+
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('exito', false, 'error', 'No hay espacios libres disponibles');
+    END IF;
+
+    -- 5. Obtener o crear tarjeta
+    SELECT t.id INTO v_tarjeta_id
+    FROM tarjetas t
+    WHERE t.activa = false
+    LIMIT 1
+    FOR UPDATE SKIP LOCKED;
+
+    IF NOT FOUND THEN
+        v_codigo := upper(substr(md5(random()::text || clock_timestamp()::text), 1, 12));
+        INSERT INTO tarjetas (codigo, espacio_id, activa)
+        VALUES (v_codigo, v_espacio_id, true)
+        RETURNING id INTO v_tarjeta_id;
+        v_codigo := v_codigo; -- usar el generado
+    ELSE
+        v_codigo := (SELECT codigo FROM tarjetas WHERE id = v_tarjeta_id);
+        UPDATE tarjetas SET activa = true, espacio_id = v_espacio_id WHERE id = v_tarjeta_id;
+    END IF;
+
+    -- 6. Crear asignación
+    INSERT INTO asignaciones (usuario_id, vehiculo_id, espacio_id, tarjeta_id, estado)
+    VALUES (v_usuario_id, v_vehiculo_id, v_espacio_id, v_tarjeta_id, 'activa')
+    RETURNING id INTO v_asignacion_id;
+
+    -- 7. Marcar espacio ocupado
+    UPDATE espacios SET estado = 'ocupado' WHERE id = v_espacio_id;
+
+    RETURN jsonb_build_object(
+        'exito', true,
+        'sector', v_sector,
+        'numero', v_numero,
+        'codigo_tarjeta', v_codigo,
+        'asignacion_id', v_asignacion_id
+    );
+END;
+$$;
+```
+
+### 18.2 `verificar_espacio`
+
+```sql
+-- @kind(function)
+-- @scope(parking)
+-- @contract(in: codigo_tarjeta -> out: datos ocupante + espacio)
+CREATE OR REPLACE FUNCTION public.verificar_espacio(
+    p_codigo_tarjeta text
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_result jsonb;
+BEGIN
+    SELECT jsonb_build_object(
+        'valido', true,
+        'conductor', jsonb_build_object('nombre', u.nombre, 'rut', u.rut, 'email', u.email),
+        'vehiculo', jsonb_build_object('patente', v.patente, 'marca', v.marca, 'modelo', v.modelo, 'color', v.color),
+        'espacio', jsonb_build_object('sector', e.sector, 'numero', e.numero),
+        'asignacion_id', a.id,
+        'entrada', a.entrada
+    ) INTO v_result
+    FROM tarjetas t
+    JOIN asignaciones a ON a.tarjeta_id = t.id AND a.estado = 'activa'
+    JOIN usuarios u ON u.id = a.usuario_id
+    JOIN vehiculos v ON v.id = a.vehiculo_id
+    JOIN espacios e ON e.id = t.espacio_id
+    WHERE t.codigo = p_codigo_tarjeta AND t.activa = true;
+
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('valido', false, 'error', 'Tarjeta inválida o inactiva');
+    END IF;
+
+    -- Registrar verificación (para auditoría offline/online)
+    UPDATE asignaciones
+    SET verificada_en = COALESCE(verificada_en, NOW()),
+        verificada_por = COALESCE(verificada_por, auth.uid())
+    WHERE id = (v_result->>'asignacion_id')::uuid;
+
+    RETURN v_result;
+END;
+$$;
+```
+
+### 18.3 `liberar_espacio`
+
+```sql
+-- @kind(function)
+-- @scope(parking)
+-- @contract(in: codigo_tarjeta -> out: espacio liberado + tarjeta reusable)
+CREATE OR REPLACE FUNCTION public.liberar_espacio(
+    p_codigo_tarjeta text
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_asignacion_id uuid;
+    v_espacio_id uuid;
+    v_tarjeta_id uuid;
+    v_salida timestamptz;
+BEGIN
+    -- 1. Buscar asignación activa por código de tarjeta
+    SELECT a.id, a.espacio_id, t.id INTO v_asignacion_id, v_espacio_id, v_tarjeta_id
+    FROM asignaciones a
+    JOIN tarjetas t ON t.id = a.tarjeta_id
+    WHERE t.codigo = p_codigo_tarjeta AND a.estado = 'activa'
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('exito', false, 'error', 'No hay asignación activa para esta tarjeta');
+    END IF;
+
+    -- 2. Finalizar asignación
+    v_salida := NOW();
+    UPDATE asignaciones
+    SET estado = 'finalizada', salida = v_salida
+    WHERE id = v_asignacion_id;
+
+    -- 3. Liberar espacio
+    UPDATE espacios SET estado = 'libre' WHERE id = v_espacio_id;
+
+    -- 4. Desactivar tarjeta (reusable en nueva asignación)
+    UPDATE tarjetas SET activa = false, espacio_id = NULL WHERE id = v_tarjeta_id;
+
+    RETURN jsonb_build_object(
+        'exito', true,
+        'asignacion_id', v_asignacion_id,
+        'mensaje', 'Espacio liberado correctamente',
+        'salida', v_salida
+    );
+END;
+$$;
+```
+
+### 18.4 `reportar_infraccion`
+
+```sql
+-- @kind(function)
+-- @scope(incidents)
+CREATE OR REPLACE FUNCTION public.reportar_infraccion(
+    p_asignacion_id uuid,
+    p_patente_real text
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_infraccion_id uuid;
+    v_conductor_id uuid;
+BEGIN
+    -- Validar que asignación existe y está activa
+    SELECT usuario_id INTO v_conductor_id
+    FROM asignaciones WHERE id = p_asignacion_id AND estado = 'activa';
+
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('exito', false, 'error', 'Asignación no encontrada o no activa');
+    END IF;
+
+    -- Crear infracción
+    INSERT INTO infracciones (asignacion_id, patente_real, reportada_por)
+    VALUES (p_asignacion_id, p_patente_real, auth.uid())
+    RETURNING id INTO v_infraccion_id;
+
+    -- Marcar asignación en disputa
+    UPDATE asignaciones SET estado = 'en_disputa' WHERE id = p_asignacion_id;
+
+    RETURN jsonb_build_object('exito', true, 'infraccion_id', v_infraccion_id);
+END;
+$$;
+```
+
+### 18.5 `abrir_ticket`
+
+```sql
+-- @kind(function)
+-- @scope(incidents)
+CREATE OR REPLACE FUNCTION public.abrir_ticket(
+    p_tipo text,
+    p_mensaje text
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_ticket_id uuid;
+    v_guardia_id uuid;
+BEGIN
+    -- Asignar guardia disponible (round-robin simple)
+    SELECT id INTO v_guardia_id FROM usuarios
+    WHERE rol = 'guardia' AND activo = true
+    ORDER BY (SELECT COUNT(*) FROM tickets WHERE asignado_a = usuarios.id AND estado != 'cerrado')
+    LIMIT 1;
+
+    INSERT INTO tickets (usuario_id, asignado_a, tipo, estado)
+    VALUES (auth.uid(), v_guardia_id, p_tipo, 'abierto')
+    RETURNING id INTO v_ticket_id;
+
+    INSERT INTO mensajes_ticket (ticket_id, autor_id, contenido)
+    VALUES (v_ticket_id, auth.uid(), p_mensaje);
+
+    RETURN jsonb_build_object('ticket_id', v_ticket_id, 'estado', 'abierto');
+END;
+$$;
+```
+
+### 18.6 Índices Recomendados
+
+```sql
+-- @scope(parking)
+CREATE INDEX IF NOT EXISTS idx_usuarios_rut ON usuarios (rut) WHERE activo = true;
+CREATE INDEX IF NOT EXISTS idx_vehiculos_patente ON vehiculos (patente) WHERE activo = true;
+CREATE INDEX IF NOT EXISTS idx_asignaciones_activas ON asignaciones (usuario_id) WHERE estado = 'activa';
+CREATE INDEX IF NOT EXISTS idx_espacios_libres ON espacios (sector, numero) WHERE estado = 'libre';
+CREATE INDEX IF NOT EXISTS idx_tarjetas_codigo ON tarjetas (codigo) WHERE activa = true;
+CREATE INDEX IF NOT EXISTS idx_tickets_usuario ON tickets (usuario_id, estado);
+CREATE INDEX IF NOT EXISTS idx_mensajes_ticket ON mensajes_ticket (ticket_id, created_at);
+```
+
+---
+
+## 19. Máquina de Estados — QR Dual (Digital + Físico)
+
+### 19.1 Diagrama de Estados
+
+```mermaid
+stateDiagram-v2
+    [*] --> SinTarjeta: Conductor registrado
+
+    state "QR Digital" as QRDigital
+    state "Tarjeta Física" as TarjetaFisica
+
+    SinTarjeta --> QRDigital: asignar_espacio()\ncrea tarjeta + QR en pantalla
+    SinTarjeta --> TarjetaFisica: entrega física\n(tarjeta reutilizada)
+
+    QRDigital --> Activa: guardia escanea\n(verificación online)
+    QRDigital --> OfflineCache: guardia escanea\n(sin conexión)
+
+    TarjetaFisica --> Activa: guardia escanea\n(verificación online)
+    TarjetaFisica --> OfflineCache: guardia escanea\n(sin conexión)
+
+    OfflineCache --> Activa: reconexión\nsincronización automática
+
+    Activa --> Activa: múltiples escaneos\nválidos (verificaciones)
+
+    Activa --> Finalizada: liberar_espacio()\nsalida registrada
+
+    Finalizada --> SinTarjeta: tarjeta física\nreutilizable (activa=false)
+
+    QRDigital --> Expirada: conductor cierra sesión\nsin asignación
+    Expirada --> [*]
+
+    Finalizada --> [*]: fin de ciclo
+```
+
+### 19.2 Ciclo de Vida Detallado
+
+| Etapa | QR Digital | Tarjeta Física |
+|-------|-----------|----------------|
+| **Creación** | `asignar_espacio()` genera tarjeta con código de 12 caracteres. Se muestra en pantalla del conductor (perfil) y en pantalla del digitador. | Físicamente pre-impresa con código QR. Se entrega al conductor al registrarse. |
+| **Activación** | Se activa al crear la asignación (`activa=true`). | Se re-activa al reutilizarse en nueva asignación (`UPDATE tarjetas SET activa=true WHERE codigo=...`). |
+| **Vida útil** | Duración de la asignación (hasta `liberar_espacio`). | Misma duración, pero el soporte físico es permanente. |
+| **Escaneo** | Múltiples escaneos válidos (guardia verifica datos del ocupante). No se desactiva tras el primer uso. | Múltiples escaneos. |
+| **Offline** | El scanner guarda en `localStorage` la verificación con timestamp. Al reconectarse, ejecuta `verificar_espacio()` y registra `verificada_en`. | Same. |
+| **Liberación** | `liberar_espacio()` marca `activa=false`. QR digital ya no es útil. | `liberar_espacio()` marca `activa=false` pero la tarjeta física se reutiliza. |
+| **Re-uso** | Se genera un nuevo QR digital en la siguiente asignación (misma tarjeta en DB). | La misma tarjeta física se re-activa con `activa=true, espacio_id=nuevo`. |
+| **Expiración** | Sin asignación activa, no hay QR que mostrar. | Siempre existe como registro, activable en próximo uso. |
+
+### 19.3 Flujo Offline
+
+```mermaid
+sequenceDiagram
+    participant G as Guardia
+    participant S as Scanner (PWA)
+    participant LS as localStorage
+    participant API as Supabase API
+
+    G->>S: Escanea QR
+    alt Online
+        S->>API: RPC verificar_espacio(codigo)
+        API-->>S: {valido, conductor, vehiculo, espacio}
+        S->>LS: saveVerification({codigo, resultado, timestamp})
+        S-->>G: Muestra datos del ocupante
+    else Offline
+        S->>LS: getCachedVerification(codigo)
+        LS-->>S: cache hit? (TTL 30min)
+        alt Cache válido
+            S-->>G: Muestra datos cacheados + badge "offline"
+        else Cache miss
+            S-->>G: "Sin conexión: no se puede verificar"
+            S->>LS: queueVerification({codigo, timestamp, pendiente: true})
+        end
+    end
+
+    Note over S,API: Al reconectarse
+    S->>LS: getPendingVerifications()
+    LS-->>S: [{codigo, timestamp}]
+    loop por cada pendiente
+        S->>API: RPC verificar_espacio(codigo)
+        API-->>S: resultado
+        S->>LS: updateVerification({codigo, resultado, sincronizado: true})
+    end
+```
+
+### 19.4 Estructura localStorage
+
+```typescript
+// @kind(data)
+// @scope(parking)
+type OfflineVerification = {
+  codigo: string
+  timestamp: string        // ISO
+  resultado?: 'success' | 'error'
+  data?: VerificacionData
+  sincronizado: boolean
+  origen: 'scan' | 'cache'
+}
+
+// Clave: 'parking:verificaciones'
+// Valor: OfflineVerification[]
+// TTL: 7 días (limpieza automática al liberar espacio)
+```
+
+---
+
+## 20. RLS Policies — Especificación Concreta
+
+> Cada política está lista para copiar a una migración de Supabase. Cubre todas las tablas y roles del sistema.
+
+### 20.1 Políticas por Tabla
+
+```sql
+-- ============================================================
+-- @scope(core)
+-- ============================================================
+
+-- 20.1.1 usuarios
+-- Cada usuario ve su propio perfil. Guardia y superiores ven todos.
+CREATE POLICY usuarios_self ON usuarios
+    FOR SELECT
+    USING (
+        id = auth.uid()
+        OR auth.jwt() ->> 'rol' IN ('guardia', 'digitador', 'jefe_seguridad', 'jefe_sg', 'jefe_sd', 'directivo')
+    );
+
+CREATE POLICY usuarios_update_self ON usuarios
+    FOR UPDATE
+    USING (id = auth.uid())
+    WITH CHECK (id = auth.uid());
+
+-- Solo jefe_sg puede desactivar usuarios (borrado lógico)
+CREATE POLICY usuarios_deactivate ON usuarios
+    FOR UPDATE
+    USING (auth.jwt() ->> 'rol' = 'jefe_sg')
+    WITH CHECK (auth.jwt() ->> 'rol' = 'jefe_sg' AND (activo = false OR true));
+
+-- 20.1.2 vehiculos
+-- Conductor ve sus vehículos. Guardia y superiores ven todos.
+CREATE POLICY vehiculos_self ON vehiculos
+    FOR SELECT
+    USING (
+        usuario_id = auth.uid()
+        OR auth.jwt() ->> 'rol' IN ('guardia', 'digitador', 'jefe_seguridad', 'jefe_sg', 'directivo')
+    );
+
+CREATE POLICY vehiculos_insert ON vehiculos
+    FOR INSERT
+    WITH CHECK (
+        usuario_id = auth.uid()
+        OR auth.jwt() ->> 'rol' IN ('digitador', 'jefe_sg')
+    );
+
+CREATE POLICY vehiculos_update_self ON vehiculos
+    FOR UPDATE
+    USING (usuario_id = auth.uid())
+    WITH CHECK (usuario_id = auth.uid());
+
+-- ============================================================
+-- @scope(parking)
+-- ============================================================
+
+-- 20.1.3 espacios
+-- Todos los roles autenticados pueden ver espacios.
+CREATE POLICY espacios_select_all ON espacios
+    FOR SELECT
+    USING (auth.rol() IS NOT NULL);
+
+-- Solo guardia, digitador, jefe_sg pueden modificar estados de espacio.
+CREATE POLICY espacios_update_estado ON espacios
+    FOR UPDATE
+    USING (auth.jwt() ->> 'rol' IN ('guardia', 'digitador', 'jefe_seguridad', 'jefe_sg'))
+    WITH CHECK (auth.jwt() ->> 'rol' IN ('guardia', 'digitador', 'jefe_seguridad', 'jefe_sg'));
+
+-- 20.1.4 tarjetas
+-- Guardia y digitador pueden leer tarjetas activas.
+CREATE POLICY tarjetas_select ON tarjetas
+    FOR SELECT
+    USING (
+        auth.jwt() ->> 'rol' IN ('guardia', 'digitador', 'jefe_seguridad', 'jefe_sg')
+    );
+
+-- Solo las RPC functions (SECURITY DEFINER) modifican tarjetas.
+-- Política de seguridad: solo update si activa = true.
+CREATE POLICY tarjeta_activa_update ON tarjetas
+    FOR UPDATE
+    USING (activa = true)
+    WITH CHECK (activa = true OR activa = false);  -- permite desactivar
+
+-- 20.1.5 asignaciones
+-- Conductor ve sus propias asignaciones activas.
+-- Guardia, digitador, jefe_sg ven todas.
+CREATE POLICY asignaciones_select ON asignaciones
+    FOR SELECT
+    USING (
+        usuario_id = auth.uid()
+        OR auth.jwt() ->> 'rol' IN ('guardia', 'digitador', 'jefe_seguridad', 'jefe_sg', 'directivo')
+    );
+
+-- Solo guardia puede modificar asignaciones (verificar, liberar)
+CREATE POLICY asignaciones_update_guardia ON asignaciones
+    FOR UPDATE
+    USING (
+        auth.jwt() ->> 'rol' IN ('guardia', 'jefe_seguridad', 'jefe_sg')
+        AND estado = 'activa'
+    );
+
+-- Solo digitador + jefe_sg pueden crear asignaciones
+CREATE POLICY asignaciones_insert ON asignaciones
+    FOR INSERT
+    WITH CHECK (
+        auth.jwt() ->> 'rol' IN ('digitador', 'jefe_sg')
+    );
+
+-- ============================================================
+-- @scope(incidents)
+-- ============================================================
+
+-- 20.1.6 infracciones
+-- Conductor ve infracciones de sus asignaciones.
+-- Guardia y jefe_sg ven todas.
+CREATE POLICY infracciones_select ON infracciones
+    FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM asignaciones a
+            JOIN usuarios u ON u.id = a.usuario_id
+            WHERE a.id = infracciones.asignacion_id
+            AND (u.id = auth.uid() OR auth.jwt() ->> 'rol' IN ('guardia', 'jefe_seguridad', 'jefe_sg'))
+        )
+    );
+
+CREATE POLICY infracciones_insert ON infracciones
+    FOR INSERT
+    WITH CHECK (
+        auth.jwt() ->> 'rol' IN ('guardia', 'jefe_seguridad')
+    );
+
+-- Solo jefe_sg resuelve infracciones
+CREATE POLICY infracciones_resolve ON infracciones
+    FOR UPDATE
+    USING (auth.jwt() ->> 'rol' = 'jefe_sg' AND estado = 'pendiente')
+    WITH CHECK (auth.jwt() ->> 'rol' = 'jefe_sg');
+
+-- 20.1.7 tickets
+-- Usuario ve sus tickets. Guardia ve tickets asignados. Jefe_sg ve todos.
+CREATE POLICY tickets_select ON tickets
+    FOR SELECT
+    USING (
+        usuario_id = auth.uid()
+        OR asignado_a = auth.uid()
+        OR auth.jwt() ->> 'rol' IN ('jefe_seguridad', 'jefe_sg')
+    );
+
+CREATE POLICY tickets_insert ON tickets
+    FOR INSERT
+    WITH CHECK (usuario_id = auth.uid());
+
+CREATE POLICY tickets_update ON tickets
+    FOR UPDATE
+    USING (
+        asignado_a = auth.uid()
+        OR auth.jwt() ->> 'rol' IN ('jefe_seguridad', 'jefe_sg')
+    );
+
+-- 20.1.8 mensajes_ticket
+CREATE POLICY mensajes_select ON mensajes_ticket
+    FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM tickets t
+            WHERE t.id = mensajes_ticket.ticket_id
+            AND (t.usuario_id = auth.uid() OR t.asignado_a = auth.uid()
+                OR auth.jwt() ->> 'rol' IN ('jefe_seguridad', 'jefe_sg'))
+        )
+    );
+
+CREATE POLICY mensajes_insert ON mensajes_ticket
+    FOR INSERT
+    WITH CHECK (
+        autor_id = auth.uid()
+        AND EXISTS (
+            SELECT 1 FROM tickets t
+            WHERE t.id = mensajes_ticket.ticket_id
+            AND (t.usuario_id = auth.uid() OR t.asignado_a = auth.uid())
+        )
+    );
+```
+
+### 20.2 Matriz de Acceso por Rol
+
+| Tabla | SELECT | INSERT | UPDATE | DELETE |
+|-------|--------|--------|--------|--------|
+| `usuarios` | self + guardia+ | ❌ | self + jefe_sg | ❌ (solo borrado lógico) |
+| `vehiculos` | self + guardia+ | self + digitador+ | self | ❌ |
+| `espacios` | todos auth | ❌ | guardia+ | ❌ |
+| `tarjetas` | guardia+ | ❌ (solo RPC) | solo RPC | ❌ |
+| `asignaciones` | self + guardia+ | digitador+ | guardia+ (si activa) | ❌ |
+| `infracciones` | self + guardia+ | guardia+ | solo jefe_sg | ❌ |
+| `tickets` | self + asignado + jefe_sg+ | self | asignado + jefe_sg+ | ❌ |
+| `mensajes_ticket` | participantes + jefe_sg+ | participantes | ❌ | ❌ |
+
+> Donde `guardia+` = guardia, digitador, jefe_seguridad, jefe_sg, jefe_sd, directivo<br>
+> `digitador+` = digitador, jefe_sg<br>
+> `jefe_sg+` = jefe_sg, directivo<br>
+> `self` = solo el propio usuario autenticado (`auth.uid()` = `usuario_id`)<br>
+> `solo RPC` = las funciones `SECURITY DEFINER` bypassan RLS
+
+### 20.3 Trigger: Notificar Infracción
+
+```sql
+-- @kind(trigger)
+-- @scope(incidents)
+CREATE OR REPLACE FUNCTION public.fn_notificar_infraccion()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    INSERT INTO notificaciones (usuario_id, tipo, mensaje, referencia_id)
+    VALUES (
+        (SELECT a.usuario_id FROM asignaciones a WHERE a.id = NEW.asignacion_id),
+        'infraccion',
+        format('Se ha reportado una infracción para tu asignación en espacio %s %s',
+            (SELECT e.sector FROM espacios e JOIN asignaciones a2 ON a2.espacio_id = e.id WHERE a2.id = NEW.asignacion_id),
+            (SELECT e.numero FROM espacios e JOIN asignaciones a2 ON a2.espacio_id = e.id WHERE a2.id = NEW.asignacion_id)
+        ),
+        NEW.id
+    );
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE TRIGGER trg_notificar_infraccion
+    AFTER INSERT ON infracciones
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_notificar_infraccion();
+```
+
+---
+
+## 21. Requisitos No Funcionales
 
 ### Seguridad
 | ID | Requisito | Implementación |
@@ -1234,7 +2097,7 @@ module.exports = {
 
 ---
 
-## 17. Reglas de Negocio
+## 22. Reglas de Negocio
 
 | ID | Regla | Descripción |
 |----|-------|-------------|
@@ -1244,16 +2107,16 @@ module.exports = {
 | RN-04 | Alerta capacidad | Ocupación >85% por >1h → notificar a Jefe SG y Directivo |
 | RN-05 | Alerta expansión | Ocupación máxima >85% por 7d consecutivos → alerta |
 | RN-06 | Cierre diario | Asignaciones sin salida al cierre → reporte automático |
-| RN-07 | QR one-time | Cada QR usable una sola vez en DB |
+| RN-07 | QR multipropósito | QR digital (nuevo por reserva) + tarjeta física reutilizable. Guardia escanea múltiples veces. Verificaciones offline en localStorage. |
 | RN-08 | Offline read-only | Sin conexión: solo lectura, sin mutaciones |
 | RN-09 | Asignación automática | Sistema asigna el primer espacio libre disponible |
 | RN-10 | Notificación obligatoria | Toda infracción o ticket debe generar notificación push |
 
 ---
 
-## 18. Planificación Ágil
+## 23. Planificación Ágil
 
-### 18.1 Mapeo Checkpoints → Sprints
+### 23.1 Mapeo Checkpoints → Sprints
 
 | Sprint | CP | Objetivo | Épicas |
 |--------|-----|----------|--------|
@@ -1263,7 +2126,7 @@ module.exports = {
 | 4 | CP4 | App Conductor + Guardia + Tickets + IA | EPIC-009, 010, 011, 015 |
 | 5 | CP5 | Admin + Dashboard + Métricas + Deploy | EPIC-012, 013, 014, 016 |
 
-### 18.2 Épicas y Tickets
+### 23.2 Épicas y Tickets
 
 | Épica | Tickets | Sprint |
 |-------|---------|--------|
@@ -1298,18 +2161,18 @@ module.exports = {
 
 ---
 
-## 19. Glosario
+## 24. Glosario
 
 | Término | Definición |
 |---------|-----------|
 | **Espacio** | Plaza de estacionamiento individual identificada por sector + número (ej: A-15) |
 | **Sector** | Zona del estacionamiento (A, B, C, D) |
-| **Tarjeta física** | Tarjeta con código QR único de un solo uso |
+| **Tarjeta física** | Tarjeta con código QR impreso, reutilizable. Se entrega al conductor sin reserva y vuelve al pool al liberar. |
 | **Asignación** | Vínculo conductor-vehículo-espacio por un período |
 | **Verificación** | Cotejo visual del guardia entre vehículo real y asignado |
 | **Infracción** | Discrepancia entre vehículo esperado y real |
 | **Enrolamiento** | Registro inicial de un conductor en el sistema |
-| **QR one-time** | Código QR válido para un solo uso en DB |
+| **QR strategy** | QR digital nuevo por reserva + tarjeta física reutilizable. Escaneo múltiple permitido durante vigencia. |
 | **RLS** | Row Level Security — políticas que filtran filas según el usuario autenticado |
 | **WAL** | Write-Ahead Log — registro de transacciones de PostgreSQL usado por Realtime |
 | **PWA** | Progressive Web App — aplicación web instalable con capacidades offline |
@@ -1320,7 +2183,7 @@ module.exports = {
 
 ---
 
-## 20. Skill de Herramientas
+## 25. Skill de Herramientas
 
 Para el desarrollo del proyecto, el equipo aplica un conjunto de herramientas tecnológicas especializadas (Skills), abarcando tanto el diseño de la arquitectura como el desarrollo y gestión ágil:
 
@@ -1342,7 +2205,7 @@ Para el desarrollo del proyecto, el equipo aplica un conjunto de herramientas te
 
 ---
 
-## 21. Plan de Pruebas
+## 26. Plan de Pruebas
 
 Para asegurar la calidad del sistema híbrido físico-digital, se establecen las siguientes estrategias de QA (Aseguramiento de Calidad):
 
@@ -1367,7 +2230,7 @@ Para asegurar la calidad del sistema híbrido físico-digital, se establecen las
 
 ---
 
-## 22. Evidencias - Tablero Ágil
+## 27. Evidencias - Tablero Ágil
 
 En esta sección se documenta el seguimiento ágil del proyecto, evidenciando el cumplimiento de los Sprints y épicas definidos. Se utilizará **GitHub Projects** (o Trello) para mantener el backlog, asignar tareas y medir la velocidad del equipo.
 
