@@ -7,7 +7,7 @@
 |-----------|-------------|
 | `01-global.md` | Visión general, stack, despliegue, objetivos |
 | `02-actores.md` | Mapeo de actores, roles, autorizaciones |
-| `03-aplicaciones.md` | Definición de aplicaciones (PWA + Tauri) |
+| `03-aplicaciones.md` | Definición de aplicaciones (PWA + PWA) |
 | `04-flujos.md` | Flujos de operación (asignación, verificación, salida) |
 | `05-datos.md` | Modelo de datos, funciones SQL, vistas analíticas |
 | `06-analytics.md` | Dashboard, KPIs, proyecciones, alertas |

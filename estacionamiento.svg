@@ -1,0 +1,161 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 760" width="980" height="760">
+  <title>Mapa SVG de estacionamientos</title>
+  <desc>Estacionamientos interactivos: libre, ocupado y reservado.</desc>
+
+  <style>
+    svg {
+      background: #ffffff;
+      font-family: Arial, sans-serif;
+    }
+
+    .slot {
+      stroke: #334155;
+      stroke-width: 1.5;
+      cursor: pointer;
+      transition: transform .12s ease, filter .12s ease, stroke-width .12s ease;
+    }
+
+    .slot.free { fill: #22c55e; }
+    .slot.occupied { fill: #ef4444; }
+    .slot.reserved { fill: #facc15; }
+
+    .slot:hover {
+      filter: brightness(1.07);
+      stroke-width: 2.2;
+    }
+  </style>
+
+  <g id="parking"></g>
+
+  <script>
+    const nextStatus = {
+      free: "occupied",
+      occupied: "reserved",
+      reserved: "free"
+    };
+
+    const labelStatus = {
+      free: "Libre",
+      occupied: "Ocupado",
+      reserved: "Reservado"
+    };
+
+    const svgNS = "http://www.w3.org/2000/svg";
+    const root = document.getElementById("parking");
+
+    function row(prefix, x, y, count, statuses, angle = 0) {
+      return { type: "row", prefix, x, y, count, statuses, angle };
+    }
+
+    function column(prefix, x, y, count, statuses, angle = 0) {
+      return { type: "column", prefix, x, y, count, statuses, angle };
+    }
+
+    const W = 30;
+    const H = 56;
+    const GAP_X = 8;
+    const GAP_Y = 10;
+
+    const layout = [
+      // Fila superior
+      row("A", 170, 40, 18, [
+        "occupied","free","occupied","free","occupied","occupied","occupied","occupied",
+        "free","occupied","occupied","free","occupied","free","occupied","occupied","free","free"
+      ]),
+
+      // Bloques centrales superiores
+      row("B", 250, 150, 12, [
+        "free","occupied","free","occupied","occupied","free",
+        "occupied","occupied","free","free","occupied","free"
+      ]),
+      row("C", 250, 255, 12, [
+        "free","free","occupied","free","occupied","free",
+        "free","occupied","occupied","free","free","occupied"
+      ]),
+
+      // Bloque central medio
+      row("D", 320, 370, 10, [
+        "free","free","free","free","free",
+        "occupied","occupied","reserved","reserved","free"
+      ]),
+      row("E", 320, 435, 10, [
+        "free","free","free","occupied","occupied",
+        "occupied","free","free","occupied","free"
+      ]),
+
+      // Fila inferior
+      row("F", 300, 585, 10, [
+        "free","occupied","free","occupied","occupied",
+        "free","free","occupied","free","free"
+      ]),
+
+      // Lado izquierdo inclinado
+      column("L", 90, 170, 12, [
+        "free","occupied","free","free","occupied","free",
+        "occupied","free","free","occupied","free","free"
+      ], -12),
+
+      // Lado derecho (2 columnas)
+      column("R1", 760, 140, 13, [
+        "occupied","free","free","occupied","occupied","free",
+        "occupied","free","occupied","free","free","occupied","free"
+      ]),
+      column("R2", 815, 140, 13, [
+        "free","free","occupied","free","occupied","occupied",
+        "free","free","free","occupied","free","occupied","free"
+      ])
+    ];
+
+    function createSlot(id, x, y, status, angle = 0) {
+      const g = document.createElementNS(svgNS, "g");
+      g.setAttribute("transform", `translate(${x} ${y}) rotate(${angle} ${W/2} ${H/2})`);
+
+      const rect = document.createElementNS(svgNS, "rect");
+      rect.setAttribute("x", 0);
+      rect.setAttribute("y", 0);
+      rect.setAttribute("width", W);
+      rect.setAttribute("height", H);
+      rect.setAttribute("rx", 5);
+      rect.setAttribute("ry", 5);
+      rect.setAttribute("class", `slot ${status}`);
+      rect.dataset.id = id;
+      rect.dataset.status = status;
+
+      const title = document.createElementNS(svgNS, "title");
+      title.textContent = `${id} - ${labelStatus[status]}`;
+      rect.appendChild(title);
+
+      rect.addEventListener("click", () =&gt; {
+        const current = rect.dataset.status;
+        const next = nextStatus[current];
+        rect.dataset.status = next;
+        rect.setAttribute("class", `slot ${next}`);
+        rect.querySelector("title").textContent = `${rect.dataset.id} - ${labelStatus[next]}`;
+      });
+
+      g.appendChild(rect);
+      root.appendChild(g);
+    }
+
+    function draw() {
+      layout.forEach(block =&gt; {
+        for (let i = 0; i &lt; block.count; i++) {
+          const id = `${block.prefix}${String(i + 1).padStart(2, "0")}`;
+          const status = block.statuses[i] || "free";
+
+          const x = block.type === "row"
+            ? block.x + i * (W + GAP_X)
+            : block.x;
+
+          const y = block.type === "column"
+            ? block.y + i * (H - 10)
+            : block.y;
+
+          createSlot(id, x, y, status, block.angle || 0);
+        }
+      });
+    }
+
+    draw();
+  </script>
+</svg>

@@ -102,8 +102,8 @@ graph TD
 
 | Perfil | Tipo de Cuenta | Método de Autenticación | Acceso |
 |--------|---------------|------------------------|--------|
-| Conductor | Autoregistro o creado por Digitador | RUT + verificación | PWA Móvil |
-| Guardia | Creado por Jefe SG | Email + password | PWA Móvil |
+| Conductor | Autoregistro o creado por Digitador | RUT + verificación | PWA |
+| Guardia | Creado por Jefe SG | Email + password | PWA |
 | Digitador | Creado por Jefe SG | Email + password | PWA |
 | Jefe Seguridad | Creado por Jefe SG | Email + password | PWA |
 | Jefe Servicios Grales | Super admin | Email + password | PWA |

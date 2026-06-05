@@ -53,12 +53,12 @@ Bootcamp CODEC AI Duoc UC Maipu — evaluación por checkpoints, top 3 premiados
 | | T-016: Diagrama de procesos (flujo completo) |
 | EPIC-005: Prototipado UI | T-017: Maqueta PWA Conductor (mobile-first) |
 | | T-018: Maqueta PWA Guardia (escáner + verificación) |
-| | T-019: Maqueta Tauri Digitador (CRUDs) |
-| | T-020: Maqueta Tauri Jefes + Directivo (dashboards) |
+| | T-019: Maqueta PWA Digitador (CRUDs) |
+| | T-020: Maqueta PWA Jefes + Directivo (dashboards) |
 | EPIC-006: Setup frontend | T-021: Inicializar proyecto React + Vite + Tailwind |
 | | T-022: Configurar tema Duoc UC (colores, tipografía) |
 | | T-023: Configurar PWA (manifest, service worker) |
-| | T-024: Configurar proyecto Tauri base |
+| | T-024: Configurar proyecto PWA base |
 
 ---
 
@@ -112,7 +112,7 @@ Bootcamp CODEC AI Duoc UC Maipu — evaluación por checkpoints, top 3 premiados
 
 | Épica | Tickets |
 |-------|---------|
-| EPIC-012: Vista Super Admin (Tauri) | T-047: Dashboard global con KPIs |
+| EPIC-012: Vista Super Admin (PWA) | T-047: Dashboard global con KPIs |
 | | T-048: Gestión de enrolamiento (usuarios) |
 | | T-049: Reportes visuales de tendencias |
 | | T-050: Alertas de capacidad crítica (>85%) |

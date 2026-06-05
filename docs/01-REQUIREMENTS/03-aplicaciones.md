@@ -4,7 +4,7 @@
 
 # Definición de Aplicaciones
 
-## Aplicación Móvil — PWA (Conductor + Guardia)
+## PWA — PWA (Conductor + Guardia)
 
 ### Justificación
 Ambos actores operan en terreno y necesitan:
@@ -34,13 +34,13 @@ Ambos actores operan en terreno y necesitan:
 
 ---
 
-## Aplicación Escritorio — Tauri (Digitador + Jefes + Directivos)
+## Aplicación Escritorio — PWA (Digitador + Jefes + Directivos)
 
 ### Justificación
 Actores administrativos que trabajan en escritorio:
 - Pantallas grandes para dashboards
 - Atajos de teclado
-- Ventanas nativas sin restricciones de browser
+- vistas completas sin restricciones de browser
 - Sesiones largas con multitarea
 
 ### Vistas por Rol
@@ -77,8 +77,8 @@ Actores administrativos que trabajan en escritorio:
 
 | App | Build | Hosting/Distribución |
 |-----|-------|---------------------|
-| PWA Móvil | Vite + PWA plugin | Netlify (CDN global) |
-| Tauri Desktop | Tauri bundler | MSI/AppImage/DMG instalable |
+| PWA | Vite + PWA plugin | Netlify (CDN global) |
+| PWA | PWA bundler | MSI/AppImage/DMG instalable |
 
 ## Autenticación Unificada
 - Supabase Auth con email+password o magic link

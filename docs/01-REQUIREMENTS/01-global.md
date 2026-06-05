@@ -15,10 +15,10 @@ Sistema digital que gestiona la asignación, verificación y análisis del uso d
 | Capa | Tecnología |
 |------|-----------|
 | Frontend Mobile | React + TypeScript + Vite + Tailwind + shadcn (PWA) |
-| Frontend Desktop | React + TypeScript + Vite + Tailwind + shadcn (Tauri) |
+| Frontend Desktop | React + TypeScript + Vite + Tailwind + shadcn (PWA) |
 | Backend | Supabase (PostgreSQL, Auth, Storage, Realtime) |
 | Despliegue PWA | Netlify |
-| Despliegue Desktop | Tauri (Windows/Linux/macOS) |
+| Despliegue Desktop | PWA (Windows/Linux/macOS) |
 
 ## Contexto del Bootcamp
 - **Programa**: Bootcamp CODEC AI — Duoc UC Sede Maipú
@@ -38,7 +38,7 @@ Sistema digital que gestiona la asignación, verificación y análisis del uso d
 1. **Lógica en DB** — Cálculos y validaciones en PostgreSQL (funciones, vistas, triggers)
 2. **Frontend tonto** — UI solo renderiza datos, no procesa lógica de negocio
 3. **RLS como firewall** — Row Level Security de Supabase como única barrera de autorización
-4. **Base compartida** — Una sola base de datos para todas las aplicaciones (PWA + Tauri)
+4. **Base compartida** — Una sola base de datos para todas las aplicaciones (PWA + PWA)
 5. **Híbrido físico+digital** — Tarjetas físicas QR vinculadas a registros digitales
 6. **AI-first requirements** — Contratos OPL → Google AI Studio → código + docs humanos
 
@@ -48,7 +48,7 @@ Sistema digital que gestiona la asignación, verificación y análisis del uso d
 |------|-------------------|---------|--------|
 | Frontend | StitchWithGoogle | React + Vite + Tailwind + shadcn | Madurez, testing, ecosistema |
 | Mobile | — | PWA (service worker) | Sin app stores, offline parcial |
-| Desktop | — | Tauri | Ventanas nativas para admins |
+| Desktop | — | PWA | vistas completas para admins |
 | IA | Google AI Studio + Antigravity | Google AI Studio + Antigravity | Estándar del bootcamp |
 | Backend/DB | Supabase + Firebase Auth | Supabase (unificado) | PostgreSQL real, RLS, Realtime |
 | Cloud | AWS o Google Cloud | Vercel / Google Cloud Run | Serverless, CDN, Docker |

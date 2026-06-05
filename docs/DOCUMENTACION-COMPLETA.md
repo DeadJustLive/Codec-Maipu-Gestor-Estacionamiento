@@ -99,7 +99,7 @@ Duoc UC Sede Maipú es el campus más extenso y poblado de Duoc UC en Santiago/C
 #### ADR-002: PWA única para todos los roles
 - **Motivo**: Un solo codebase reduce mantención, testing y deploy
 - **Control por RLS**: cada rol ve diferentes componentes según `usuarios.rol`
-- **Descartado**: Tauri, Ionic, apps nativas
+- **Descartado**: PWA, Ionic, 
 - **Framework**: Vite > Next.js (sin SSR, sin SEO, más rápido)
 
 #### ADR-003: Vistas materializadas para analytics

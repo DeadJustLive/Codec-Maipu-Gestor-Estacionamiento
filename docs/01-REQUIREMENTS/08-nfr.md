@@ -45,7 +45,7 @@
 | # | Requisito |
 |---|-----------|
 | NFR-17 | PWA instalable en home screen (Android/iOS) |
-| NFR-18 | Tauri: ventanas redimensionables con layout responsive |
+| NFR-18 | PWA: ventanas redimensionables con layout responsive |
 | NFR-19 | Interfaz en español |
 | NFR-20 | Notificaciones push para infracciones y alertas |
 

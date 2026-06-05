@@ -1,10 +1,10 @@
 // @kind(document)
 // @contract(in: requisitos por actor -> out: especificación de vistas)
-// @limit(2 aplicaciones: PWA móvil + Tauri desktop)
+// @limit(2 aplicaciones: PWA + PWA)
 
 # Vistas por Aplicación y Rol
 
-## App Móvil PWA
+## PWA
 
 ### Conductor
 
@@ -29,7 +29,7 @@
 
 ---
 
-## App Desktop Tauri
+## App Desktop PWA
 
 ### Digitador
 
@@ -76,7 +76,7 @@
 ## Navegación y Layout Compartido
 
 ```
-Tauri Desktop Layout
+PWA Layout
 ┌──────────────────────────────────────────────┐
 │  Sidebar (roles según usuario)               │
 │  ┌────────────────────────────────────────┐  │

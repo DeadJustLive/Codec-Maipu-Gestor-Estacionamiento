@@ -6,7 +6,7 @@
 
 ## Contexto
 La ocupación de los 110 espacios cambia constantemente (asignación, verificación, liberación).
-Las apps PWA (Conductor + Guardia) y Tauri (Jefes) deben reflejar cambios en <500ms.
+Las apps PWA (Conductor + Guardia) y PWA (Jefes) deben reflejar cambios en <500ms.
 
 ## Arquitectura
 ```

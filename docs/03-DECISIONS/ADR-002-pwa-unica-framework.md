@@ -1,12 +1,12 @@
 // @kind(document)
 // @contract(in: simplificación arquitectónica -> out: PWA única con Vite)
-// @limit(sin Tauri, sin Ionic, sin Next.js)
+// @limit(sin PWA, sin Ionic, sin Next.js)
 // @scope(core)
 
 # ADR-002: PWA Única — Unificación de Plataforma
 
 ## Contexto
-Originalmente se contemplaban dos aplicaciones: PWA móvil (Conductor + Guardia) y Tauri desktop (Digitador + Jefes + Directivos). Esto duplica mantención, testing y deploy.
+Originalmente se contemplaban dos aplicaciones: PWA (Conductor + Guardia) y PWA (Digitador + Jefes + Directivos). Esto duplica mantención, testing y deploy.
 
 ## Decisión
 **Una sola PWA** construida con **Vite + React + Tailwind + shadcn**. El control de acceso por roles (RLS en Supabase) determina qué vistas y componentes ve cada usuario.
@@ -28,8 +28,8 @@ Veredicto: **Vite** — más rápido de desarrollar, buildear y deployar.
 
 ### Antes (descartado)
 ```
-PWA Móvil → Conductor + Guardia
-Tauri Desktop → Digitador + Jefes + Directivos
+PWA → Conductor + Guardia
+PWA → Digitador + Jefes + Directivos
 ```
 
 ### Ahora

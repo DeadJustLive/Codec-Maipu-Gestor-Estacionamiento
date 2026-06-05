@@ -9,7 +9,10 @@
       "validate",
       "analyze_project",
       "work_context_status",
-      "work_context_start"
+      "work_context_start",
+      "recall",
+      "knowledge_search",
+      "context"
     ],
     "domain": "programming",
     "task": null,

@@ -14,7 +14,7 @@ Competencia intersedes con evaluación por checkpoints. Stack abierto con recome
 |------|--------------------|---------|---------------|
 | Frontend | StitchWithGoogle | React + Vite + Tailwind + shadcn | Madurez, testing, ecosistema, portabilidad |
 | Mobile | No especifica | PWA (service worker + manifest) | Sin app stores, sin SDKs nativos, deploy directo |
-| Desktop | No especifica | Tauri | Ventanas nativas para Digitador/Jefes/Directivos |
+| Desktop | No especifica | PWA | vistas completas para Digitador/Jefes/Directivos |
 | IA | Google AI Studio | Google AI Studio | Mantenemos estándar del bootcamp |
 | Backend/DB | Supabase + Firebase Auth | Supabase (PostgreSQL, Auth, RLS, Realtime, Storage) | Unificado, RLS, Realtime nativo, código abierto |
 | Deployment | AWS o Google Cloud | Vercel (PWA) / Google Cloud Run (opcional) | Simplicidad, serverless, CDN global |
@@ -25,16 +25,16 @@ Competencia intersedes con evaluación por checkpoints. Stack abierto con recome
 - **Motivo**: PostgreSQL real (no NoSQL), RLS por fila, Realtime nativo con WAL, migrations con CLI, self-host posible
 - **Costo**: Free tier generoso, Pro $25/mes cuando se necesite
 
-### ADR-001b: PWA sobre apps nativas
+### ADR-001b: PWA sobre 
 - **Motivo**: Un solo codebase React para todas las vistas, deploy a Netlify/Vercel sin app stores, offline parcial con service worker
-- **Excepción**: Tauri solo para roles administrativos (Digitador, Jefes, Directivos) que necesitan ventanas nativas
+- **Excepción**: PWA solo para roles administrativos (Digitador, Jefes, Directivos) que necesitan vistas completas
 
 ### ADR-001c: Vistas materializadas para analytics
 - **Motivo**: Consultas agregadas sobre 110 espacios + miles de asignaciones serían lentas en tiempo real
 - **Solución**: Vistas materializadas actualizadas por triggers + función `refresh_analytics()`
 
 ### ADR-001d: RLS como única barrera de seguridad
-- **Motivo**: No hay backend intermedio — frontend (PWA + Tauri) consulta Supabase directo
+- **Motivo**: No hay backend intermedio — frontend (PWA + PWA) consulta Supabase directo
 - **Regla**: Cada tabla tiene policies RLS por rol, auditables en SQL
 
 ## Riesgos
