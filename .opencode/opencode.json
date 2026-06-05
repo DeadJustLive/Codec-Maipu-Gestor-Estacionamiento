@@ -1,0 +1,22 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "openPrompt": {
+      "type": "local",
+      "command": [
+        "openprompt-lang",
+        "mcp"
+      ],
+      "enabled": true
+    }
+  },
+  "skills": {
+    "paths": [
+      ".opencode/skills"
+    ]
+  },
+  "default_agent": "openPrompt",
+  "instructions": [
+    "AGENTS.md"
+  ]
+}

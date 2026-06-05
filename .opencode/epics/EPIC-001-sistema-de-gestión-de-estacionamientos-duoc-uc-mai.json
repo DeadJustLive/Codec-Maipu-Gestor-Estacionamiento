@@ -1,0 +1,15 @@
+{
+  "id": "EPIC-001",
+  "title": "Sistema de Gestión de Estacionamientos Duoc UC Maipu",
+  "description": "",
+  "status": "planning",
+  "created": "2026-06-05T14:11:50.143Z",
+  "tickets": [],
+  "sprints": [],
+  "domain": "parking",
+  "metrics": {
+    "totalTickets": 0,
+    "doneTickets": 0,
+    "estimatedDays": 2
+  }
+}

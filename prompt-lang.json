@@ -1,0 +1,23 @@
+{
+  "name": "Codec-Maipu",
+  "version": "0.1.0",
+  "lenguaje": "typescript",
+  "strictMode": true,
+  "stack": {
+    "base": [
+      "react",
+      "typescript",
+      "vite",
+      "tailwind"
+    ],
+    "ui": "shadcn",
+    "extensions": [],
+    "domain": "general"
+  },
+  "mcp": {
+    "servers": {
+      "OPL": "src/mcp-server.js"
+    },
+    "protocol": "json-rpc-2.0"
+  }
+}
